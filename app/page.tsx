@@ -100,6 +100,58 @@ const searchTypes = [
   { key: 'twitter', label: 'Twitter', icon: '🐦' },
 ];
 
+// 信息卡片模板配置
+const cardTemplates = [
+  {
+    key: 'flowing_tech_blue',
+    label: '流动科技蓝风格',
+    description: '现代科技蓝色调，流动曲线设计，蓝白渐变，几何元素，清新简洁',
+    preview: '🌊💙 流动科技蓝',
+  },
+  {
+    key: 'soft_rounded_card',
+    label: '圆角卡片温柔风格',
+    description: '温柔色彩搭配，圆角设计，紫黄粉米色调，极简主义，网格布局',
+    preview: '🌸💜 圆角温柔',
+  },
+  {
+    key: 'modern_business_info',
+    label: '现代商务资讯卡片风',
+    description: '商务专业风格，绿红颜色编码，卡片式布局，三级层次，商务美学',
+    preview: '💼📊 商务资讯',
+  },
+  {
+    key: 'minimal_grid',
+    label: '极简格栅主义封面风格',
+    description: '极简网格设计，黑白对比，几何元素，严格网格，摄影融合',
+    preview: '⬛⬜ 极简格栅',
+  },
+  {
+    key: 'industrial_rebellion',
+    label: '新潮工业反叛风',
+    description: '工业反叛风格，黑色背景，高对比度，地下文化，解构主义字体',
+    preview: '🖤⚡ 工业反叛',
+  },
+  {
+    key: 'tech_knowledge_sharing',
+    label: '科技感知识分享',
+    description: '深蓝科技色调，几何图形元素，技术符号，专业化设计，权威感',
+    preview: '🔷🤖 科技知识',
+  },
+  {
+    key: 'scene_photo_xiaohongshu',
+    label: '场景图片小红书封面',
+    description: '现实场景背景，黄色醒目标题，真实备考照片，代入感强',
+    preview: '📸💛 场景封面',
+  },
+  {
+    key: 'luxury_natural_artistic',
+    label: '奢华自然意境风',
+    description: '高级沉稳色调，暗调景观背景，东西方美学融合，摄影级光影',
+    preview: '🏞️✨ 奢华意境',
+  },
+];
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState('extract');
   const [input, setInput] = useState('');
@@ -133,6 +185,14 @@ export default function Home() {
   const [rewriteLoading, setRewriteLoading] = useState(false);
   const [rewriteError, setRewriteError] = useState('');
   const [rewriteCopied, setRewriteCopied] = useState(false);
+
+  // 信息卡片专用
+  const [cardInput, setCardInput] = useState('');
+  const [cardTemplate, setCardTemplate] = useState('flowing_tech_blue');
+  const [cardResult, setCardResult] = useState('');
+  const [cardLoading, setCardLoading] = useState(false);
+  const [cardError, setCardError] = useState('');
+  const [cardCopied, setCardCopied] = useState(false);
 
   // 内容提炼生成
   const handleGenerate = async () => {
@@ -311,6 +371,70 @@ export default function Home() {
       navigator.clipboard.writeText(rewriteResult);
       setRewriteCopied(true);
       setTimeout(() => setRewriteCopied(false), 1500);
+    }
+  };
+
+  // 信息卡片生成
+  const handleCardGenerate = async () => {
+    setCardError('');
+    setCardResult('');
+    setCardCopied(false);
+    if (!cardInput.trim()) {
+      setCardError('请输入简介文案');
+      return;
+    }
+    setCardLoading(true);
+    try {
+      const res = await fetch('/api/generate-card', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: cardInput,
+          template: cardTemplate,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setCardError(data.message || '卡片生成失败，请稍后重试');
+      } else {
+        setCardResult(data.result);
+      }
+    } catch (e) {
+      setCardError('卡片生成失败，请稍后重试');
+    } finally {
+      setCardLoading(false);
+    }
+  };
+
+  // 信息卡片复制
+  const handleCardCopy = () => {
+    if (cardResult) {
+      navigator.clipboard.writeText(cardResult);
+      setCardCopied(true);
+      setTimeout(() => setCardCopied(false), 1500);
+    }
+  };
+
+  // 信息卡片下载图片
+  const handleCardDownload = async () => {
+    const cardElement = document.getElementById('card-preview');
+    if (!cardElement) return;
+
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const canvas = await html2canvas(cardElement, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true,
+      });
+
+      const link = document.createElement('a');
+      link.download = `信息卡片_${new Date().getTime()}.png`;
+      link.href = canvas.toDataURL();
+      link.click();
+    } catch (error) {
+      console.error('下载失败:', error);
+      setCardError('图片下载失败，请稍后重试');
     }
   };
 
@@ -637,9 +761,86 @@ export default function Home() {
 
           {/* 信息卡片、图片生成Tab */}
           {activeTab === 'card' && (
-            <div className="text-center text-gray-400 py-32 text-lg">
-              信息卡片功能开发中，敬请期待...
-            </div>
+            <>
+              <div className="mb-8">
+                <label className="block text-sm font-medium text-gray-700 mb-2">输入简介文案</label>
+                <textarea
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent h-32"
+                  placeholder="请输入需要制作信息卡片的简介文案..."
+                  value={cardInput}
+                  onChange={e => setCardInput(e.target.value)}
+                  disabled={cardLoading}
+                />
+              </div>
+
+              <div className="mb-8">
+                <label className="block text-sm font-medium text-gray-700 mb-4">选择封面模版</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {cardTemplates.map(template => (
+                    <div
+                      key={template.key}
+                      className={`rounded-xl border p-4 cursor-pointer transition-all ${
+                        cardTemplate === template.key
+                          ? 'border-primary shadow-lg bg-red-50'
+                          : 'border-gray-200 bg-white hover:shadow'
+                      }`}
+                      onClick={() => setCardTemplate(template.key)}
+                    >
+                      <div className="text-center mb-3">
+                        <div className="text-2xl mb-2">{template.preview}</div>
+                        <div className="font-bold text-sm">{template.label}</div>
+                      </div>
+                      <p className="text-xs text-gray-600 text-center leading-relaxed">
+                        {template.description}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-center">
+                <button
+                  className="w-full max-w-xl btn-primary py-4 text-lg"
+                  onClick={handleCardGenerate}
+                  disabled={cardLoading}
+                >
+                  {cardLoading ? '生成中...' : '生成信息卡片'}
+                </button>
+              </div>
+
+              {cardError && <div className="text-red-500 text-center mt-4">{cardError}</div>}
+
+              {cardResult && (
+                <div className="mt-10 max-w-2xl mx-auto">
+                  <div className="bg-white rounded-xl shadow p-6">
+                    <div className="font-bold mb-2 text-primary flex items-center justify-between">
+                      生成的信息卡片
+                      <div className="flex gap-2">
+                        <button
+                          className="px-3 py-1 text-xs rounded bg-primary text-white hover:bg-primary-dark transition-colors"
+                          onClick={handleCardCopy}
+                        >
+                          {cardCopied ? '已复制' : '复制HTML'}
+                        </button>
+                        <button
+                          className="px-3 py-1 text-xs rounded bg-green-500 text-white hover:bg-green-600 transition-colors"
+                          onClick={handleCardDownload}
+                        >
+                          下载图片
+                        </button>
+                      </div>
+                    </div>
+                    <div className="mt-4 flex justify-center">
+                      <div
+                        id="card-preview"
+                        dangerouslySetInnerHTML={{ __html: cardResult }}
+                        className="border-2 border-dashed border-gray-200 p-2 rounded-lg"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
           {activeTab === 'image' && (
             <div className="text-center text-gray-400 py-32 text-lg">
