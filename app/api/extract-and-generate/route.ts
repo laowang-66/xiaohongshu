@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Search1APIUtil } from '@/app/utils/search1api-util';
 
 // 建议实际部署时用 process.env 存储密钥
-const SEARCH1API_KEY = '1F8E1B2F-D1A4-485E-983C-17538D400B3F'; // Search1API Key
+const SEARCH1API_KEY = 'D02FA946-B803-49A9-BBDC-402F7AB8EF3A'; // Search1API Key
 const DEEPSEEK_API_KEY = 'sk-28c73a6d126d45ae9d5237427ba65bde'; // DeepSeek API Key
 
 export async function POST(req: NextRequest) {
