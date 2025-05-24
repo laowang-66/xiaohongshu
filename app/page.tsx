@@ -82,28 +82,6 @@ const noteStyles = [
   },
 ];
 
-const referenceNotes = [
-  {
-    title: '参考爆款',
-    content: [
-      'Q.5款热门咖啡实测！这款性价比最高☕️',
-      '一直想做一款温和又不腻的咖啡，这次终于一次买了5款热门产品来对比测评~',
-      '第一名：美丽芳丝（97分）',
-      '功效力：⭐⭐⭐⭐⭐',
-      '温和度：⭐⭐⭐⭐',
-    ],
-  },
-  {
-    title: '预设风格',
-    content: [
-      '咖啡小白必看｜一张图看懂10种咖啡的区别',
-      '发现很多小伙伴分不清各种咖啡的区别，作为一名咖啡师，今天给大家整理了一份超详细咖啡科普！',
-      '1. 意式浓缩（Espresso）',
-      '特点：浓缩咖啡的基础，约30ml',
-    ],
-  },
-];
-
 const rewriteStyles = [
   { key: 'video', label: '口播短视频' },
   { key: 'xiaohongshu', label: '小红书图文笔记内容' },
@@ -130,6 +108,10 @@ export default function Home() {
   const [error, setError] = useState('');
   const [result, setResult] = useState('');
   const [copied, setCopied] = useState(false);
+
+  // 添加生成模式状态
+  const [generateMode, setGenerateMode] = useState<'preset' | 'reference'>('preset');
+  const [referenceContent, setReferenceContent] = useState('');
 
   // 全网搜索专用
   const [searchInput, setSearchInput] = useState('');
@@ -161,6 +143,13 @@ export default function Home() {
       setError('请输入内容链接');
       return;
     }
+
+    // 根据模式验证必要参数
+    if (generateMode === 'reference' && !referenceContent.trim()) {
+      setError('请输入参考爆款内容');
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch('/api/extract-and-generate', {
@@ -168,7 +157,12 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           link: input,
-          style: noteStyles.find(s => s.key === selectedStyle)?.label || '',
+          mode: generateMode,
+          style:
+            generateMode === 'preset'
+              ? noteStyles.find(s => s.key === selectedStyle)?.label || ''
+              : undefined,
+          referenceContent: generateMode === 'reference' ? referenceContent : undefined,
         }),
       });
       const data = await res.json();
@@ -357,39 +351,83 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Main content: note styles and reference */}
-              <div className="flex flex-col lg:flex-row gap-8">
-                {/* Note styles */}
-                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {noteStyles.map(style => (
-                    <div
-                      key={style.key}
-                      className={`rounded-xl border p-4 cursor-pointer transition-all ${selectedStyle === style.key ? 'border-primary shadow-lg bg-red-50' : 'border-gray-200 bg-white hover:shadow'}`}
-                      onClick={() => setSelectedStyle(style.key)}
-                    >
-                      <div className="font-bold mb-2">{style.label}</div>
-                      <ul className="text-sm text-gray-700 space-y-1">
-                        {style.content.map((line, idx) => (
-                          <li key={idx}>{line}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-                {/* Reference/Presets */}
-                <div className="w-full lg:w-80 flex-shrink-0 flex flex-col gap-4">
-                  {referenceNotes.map((ref, idx) => (
-                    <div key={idx} className="rounded-xl border border-gray-200 bg-white p-4">
-                      <div className="font-bold mb-2">{ref.title}</div>
-                      <ul className="text-sm text-gray-700 space-y-1">
-                        {ref.content.map((line, i) => (
-                          <li key={i}>{line}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
+              {/* 生成模式切换 */}
+              <div className="mb-8">
+                <label className="block text-sm font-medium text-gray-700 mb-4">选择生成模式</label>
+                <div className="flex gap-4 mb-6">
+                  <button
+                    className={`flex-1 p-4 rounded-lg border text-center transition-colors ${
+                      generateMode === 'preset'
+                        ? 'bg-primary text-white border-primary'
+                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                    }`}
+                    onClick={() => setGenerateMode('preset')}
+                    disabled={loading}
+                  >
+                    <div className="font-medium mb-1">预设风格</div>
+                    <div className="text-sm opacity-80">从预设模板中选择风格</div>
+                  </button>
+                  <button
+                    className={`flex-1 p-4 rounded-lg border text-center transition-colors ${
+                      generateMode === 'reference'
+                        ? 'bg-primary text-white border-primary'
+                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                    }`}
+                    onClick={() => setGenerateMode('reference')}
+                    disabled={loading}
+                  >
+                    <div className="font-medium mb-1">参考爆款</div>
+                    <div className="text-sm opacity-80">输入参考的爆款内容</div>
+                  </button>
                 </div>
               </div>
+
+              {/* 根据模式显示不同内容 */}
+              {generateMode === 'preset' ? (
+                // 预设风格模式
+                <div className="mb-8">
+                  <label className="block text-sm font-medium text-gray-700 mb-4">
+                    选择预设风格
+                  </label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {noteStyles.map(style => (
+                      <div
+                        key={style.key}
+                        className={`rounded-xl border p-4 cursor-pointer transition-all ${
+                          selectedStyle === style.key
+                            ? 'border-primary shadow-lg bg-red-50'
+                            : 'border-gray-200 bg-white hover:shadow'
+                        }`}
+                        onClick={() => setSelectedStyle(style.key)}
+                      >
+                        <div className="font-bold mb-2">{style.label}</div>
+                        <ul className="text-sm text-gray-700 space-y-1">
+                          {style.content.map((line, idx) => (
+                            <li key={idx}>{line}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                // 参考爆款模式
+                <div className="mb-8">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    输入参考爆款内容
+                  </label>
+                  <textarea
+                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent h-40"
+                    placeholder="请粘贴您想要参考的爆款小红书笔记内容..."
+                    value={referenceContent}
+                    onChange={e => setReferenceContent(e.target.value)}
+                    disabled={loading}
+                  />
+                  <div className="text-xs text-gray-400 mt-1">
+                    系统将基于您提供的参考内容风格来生成新的笔记
+                  </div>
+                </div>
+              )}
 
               {/* Generate button */}
               <div className="mt-10 flex justify-center">

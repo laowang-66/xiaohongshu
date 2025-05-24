@@ -7,9 +7,17 @@ const DEEPSEEK_API_KEY = 'sk-28c73a6d126d45ae9d5237427ba65bde'; // DeepSeek API 
 
 export async function POST(req: NextRequest) {
   try {
-    const { link, style } = await req.json();
+    const { link, mode, style, referenceContent } = await req.json();
     if (!link) {
       return NextResponse.json({ error: 1, message: '缺少链接' }, { status: 400 });
+    }
+
+    // 验证模式参数
+    if (mode === 'reference' && !referenceContent) {
+      return NextResponse.json(
+        { error: 1, message: '参考爆款模式下需要提供参考内容' },
+        { status: 400 }
+      );
     }
 
     // 1. 使用 Search1API 抓取内容（使用基础 crawl 方法获取单个页面）
@@ -40,8 +48,28 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. 使用 DeepSeek API 生成爆款笔记
-    const prompt = `请将以下内容提炼为一篇风格为「${style}」的小红书爆款笔记，要求：
+    // 2. 根据模式生成不同的 prompt
+    let prompt = '';
+
+    if (mode === 'reference') {
+      // 参考爆款模式
+      prompt = `请参考以下爆款小红书笔记的风格和结构，基于提供的原文内容生成一篇新的小红书笔记：
+
+参考爆款风格：
+${referenceContent}
+
+要求：
+1. 保持参考内容的写作风格、语气和结构特点
+2. 使用类似的emoji和表达方式
+3. 适合小红书平台，有吸引力
+4. 去除AI痕迹，让内容更自然
+5. 基于原文信息，不要编造内容
+
+原文内容：
+${rawContent}`;
+    } else {
+      // 预设风格模式
+      prompt = `请将以下内容提炼为一篇风格为「${style}」的小红书爆款笔记，要求：
 1. 内容要有吸引力，结构清晰
 2. 适当使用emoji和分点
 3. 适合小红书平台
@@ -50,6 +78,7 @@ export async function POST(req: NextRequest) {
 
 原文内容：
 ${rawContent}`;
+    }
 
     const deepseekRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
