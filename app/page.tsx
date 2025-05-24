@@ -105,10 +105,9 @@ const referenceNotes = [
 ];
 
 const rewriteStyles = [
-  { key: 'default', label: '默认' },
-  { key: '爆款', label: '爆款风格' },
-  { key: '生活', label: '生活化' },
-  { key: '专业', label: '专业解读' },
+  { key: 'video', label: '口播短视频' },
+  { key: 'xiaohongshu', label: '小红书图文笔记内容' },
+  { key: 'wechat', label: '公众号文章内容' },
 ];
 
 // 添加搜索类型配置
@@ -147,7 +146,7 @@ export default function Home() {
 
   // 改写专用
   const [rewriteInput, setRewriteInput] = useState('');
-  const [rewriteStyle, setRewriteStyle] = useState('default');
+  const [rewriteStyle, setRewriteStyle] = useState('video');
   const [rewriteResult, setRewriteResult] = useState('');
   const [rewriteLoading, setRewriteLoading] = useState(false);
   const [rewriteError, setRewriteError] = useState('');
