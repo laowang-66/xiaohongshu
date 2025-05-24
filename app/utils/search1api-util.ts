@@ -45,7 +45,7 @@ export class Search1APIUtil {
       const response = await fetch(`${this.baseUrl}/search`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          Authorization: `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(params),
@@ -69,24 +69,100 @@ export class Search1APIUtil {
    */
   async deepCrawl(params: DeepCrawlParams) {
     try {
+      // 1. 启动深度爬取任务
       const response = await fetch(`${this.baseUrl}/deepcrawl`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          Authorization: `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(params),
+        body: JSON.stringify({
+          url: params.url,
+          type: 'sitemap', // 默认使用 sitemap 模式
+        }),
       });
 
       if (!response.ok) {
         throw new Error(`Deep crawl failed: ${response.statusText}`);
       }
 
-      return await response.json();
+      const taskResult = await response.json();
+      const taskId = taskResult.taskId;
+
+      if (!taskId) {
+        throw new Error('No taskId returned from deepcrawl');
+      }
+
+      console.log(`Deep crawl task started: ${taskId}`);
+
+      // 2. 轮询任务状态直到完成
+      return await this.waitForDeepCrawlCompletion(taskId);
     } catch (error) {
       console.error('Deep crawl error:', error);
       throw error;
     }
+  }
+
+  /**
+   * 查询深度爬取任务状态
+   * @param taskId 任务ID
+   * @returns 任务状态
+   */
+  async getDeepCrawlStatus(taskId: string) {
+    try {
+      const response = await fetch(`${this.baseUrl}/deepcrawl/status/${taskId}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Get deepcrawl status failed: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Get deepcrawl status error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 等待深度爬取任务完成
+   * @param taskId 任务ID
+   * @param maxWaitTime 最大等待时间（毫秒），默认5分钟
+   * @param pollInterval 轮询间隔（毫秒），默认3秒
+   * @returns 完成的任务结果
+   */
+  async waitForDeepCrawlCompletion(
+    taskId: string,
+    maxWaitTime: number = 300000,
+    pollInterval: number = 3000
+  ) {
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < maxWaitTime) {
+      try {
+        const statusResult = await this.getDeepCrawlStatus(taskId);
+        console.log(`Task ${taskId} status: ${statusResult.status}`);
+
+        if (statusResult.status === 'completed') {
+          // 任务完成，返回结果
+          return statusResult;
+        } else if (statusResult.status === 'failed') {
+          throw new Error(`Deep crawl task failed: ${statusResult.message || 'Unknown error'}`);
+        }
+
+        // 任务还在进行中，等待后再次检查
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+      } catch (error) {
+        console.error('Error checking task status:', error);
+        throw error;
+      }
+    }
+
+    throw new Error(`Deep crawl task ${taskId} timed out after ${maxWaitTime}ms`);
   }
 
   /**
@@ -99,7 +175,7 @@ export class Search1APIUtil {
       const response = await fetch(`${this.baseUrl}/extract`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          Authorization: `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(params),
@@ -175,4 +251,31 @@ export class Search1APIUtil {
       language: 'zh',
     });
   }
-} 
+
+  /**
+   * 基础爬取功能（单个页面）
+   * @param url 要爬取的URL
+   * @returns 爬取结果
+   */
+  async crawl(url: string) {
+    try {
+      const response = await fetch(`${this.baseUrl}/crawl`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Crawl failed: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Crawl error:', error);
+      throw error;
+    }
+  }
+}
