@@ -2,12 +2,14 @@
 
 import { useState } from 'react';
 import Navigation from './components/Navigation';
+import { TEMPLATE_COMPONENTS } from './components/InfoCardTemplates';
 
 const tabs = [
   { key: 'extract', label: '内容提炼' },
   { key: 'search', label: '全网搜索' },
   { key: 'rewrite', label: '笔记改写' },
-  { key: 'card', label: '信息卡片' },
+  { key: 'card', label: '封面生成' },
+  { key: 'info-card', label: '信息卡片' },
   { key: 'image', label: '图片生成' },
 ];
 
@@ -100,7 +102,7 @@ const searchTypes = [
   { key: 'twitter', label: 'Twitter', icon: '🐦' },
 ];
 
-// 信息卡片模板配置
+// 封面模板配置
 const cardTemplates = [
   {
     key: 'flowing_tech_blue',
@@ -110,14 +112,14 @@ const cardTemplates = [
   },
   {
     key: 'soft_rounded_card',
-    label: '圆角卡片温柔风格',
+    label: '圆角温柔风格',
     description: '温柔色彩搭配，圆角设计，紫黄粉米色调，极简主义，网格布局',
     preview: '🌸💜 圆角温柔',
   },
   {
     key: 'modern_business_info',
-    label: '现代商务资讯卡片风',
-    description: '商务专业风格，绿红颜色编码，卡片式布局，三级层次，商务美学',
+    label: '现代商务资讯风',
+    description: '商务专业风格，绿红颜色编码，专业式布局，三级层次，商务美学',
     preview: '💼📊 商务资讯',
   },
   {
@@ -148,7 +150,47 @@ const cardTemplates = [
     key: 'luxury_natural_artistic',
     label: '奢华自然意境风',
     description: '高级沉稳色调，暗调景观背景，东西方美学融合，摄影级光影',
-    preview: '🏞️✨ 奢华意境',
+    preview: '✨ 奢华意境',
+  },
+];
+
+// 信息卡片模板配置
+const infoCardTemplates = [
+  {
+    key: 'knowledge_summary',
+    label: '知识总结',
+    preview: '📚',
+    description: '适用于知识点总结、学习笔记等内容整理',
+  },
+  {
+    key: 'product_intro',
+    label: '产品介绍',
+    preview: '🛍️',
+    description: '产品功能介绍、商品推荐等营销内容',
+  },
+  {
+    key: 'tutorial_steps',
+    label: '教程步骤',
+    preview: '��',
+    description: '操作指南、教程步骤、方法分享',
+  },
+  {
+    key: 'comparison_analysis',
+    label: '对比分析',
+    preview: '⚖️',
+    description: '产品对比、方案分析、选择建议',
+  },
+  {
+    key: 'experience_sharing',
+    label: '经验分享',
+    preview: '💡',
+    description: '个人经验、心得体会、实用建议',
+  },
+  {
+    key: 'event_timeline',
+    label: '事件时间线',
+    preview: '⏰',
+    description: '事件发展、历史回顾、时间节点',
   },
 ];
 
@@ -186,13 +228,21 @@ export default function Home() {
   const [rewriteError, setRewriteError] = useState('');
   const [rewriteCopied, setRewriteCopied] = useState(false);
 
-  // 信息卡片专用
+  // 封面生成专用
   const [cardInput, setCardInput] = useState('');
   const [cardTemplate, setCardTemplate] = useState('flowing_tech_blue');
   const [cardResult, setCardResult] = useState('');
   const [cardLoading, setCardLoading] = useState(false);
   const [cardError, setCardError] = useState('');
   const [cardCopied, setCardCopied] = useState(false);
+
+  // 信息卡片专用
+  const [infoCardInput, setInfoCardInput] = useState('');
+  const [infoCardTemplate, setInfoCardTemplate] = useState('knowledge_summary');
+  const [infoCardLoading, setInfoCardLoading] = useState(false);
+  const [infoCardError, setInfoCardError] = useState('');
+  const [infoCardResult, setInfoCardResult] = useState<any[]>([]);
+  const [infoCardCopied, setInfoCardCopied] = useState(false);
 
   // 内容提炼生成
   const handleGenerate = async () => {
@@ -374,13 +424,13 @@ export default function Home() {
     }
   };
 
-  // 信息卡片生成
+  // 封面生成
   const handleCardGenerate = async () => {
     setCardError('');
     setCardResult('');
     setCardCopied(false);
     if (!cardInput.trim()) {
-      setCardError('请输入简介文案');
+      setCardError('请输入封面文案内容');
       return;
     }
     setCardLoading(true);
@@ -395,18 +445,18 @@ export default function Home() {
       });
       const data = await res.json();
       if (!res.ok || data.error) {
-        setCardError(data.message || '卡片生成失败，请稍后重试');
+        setCardError(data.message || '封面生成失败，请稍后重试');
       } else {
         setCardResult(data.result);
       }
     } catch (e) {
-      setCardError('卡片生成失败，请稍后重试');
+      setCardError('封面生成失败，请稍后重试');
     } finally {
       setCardLoading(false);
     }
   };
 
-  // 信息卡片复制
+  // 封面复制
   const handleCardCopy = () => {
     if (cardResult) {
       navigator.clipboard.writeText(cardResult);
@@ -415,7 +465,7 @@ export default function Home() {
     }
   };
 
-  // 信息卡片下载图片
+  // 封面下载图片
   const handleCardDownload = async () => {
     const cardElement = document.getElementById('card-preview');
     if (!cardElement) return;
@@ -429,12 +479,105 @@ export default function Home() {
       });
 
       const link = document.createElement('a');
-      link.download = `信息卡片_${new Date().getTime()}.png`;
+      link.download = `小红书封面_${new Date().getTime()}.png`;
       link.href = canvas.toDataURL();
       link.click();
     } catch (error) {
       console.error('下载失败:', error);
-      setCardError('图片下载失败，请稍后重试');
+      setCardError('封面下载失败，请稍后重试');
+    }
+  };
+
+  // 信息卡片生成
+  const handleInfoCardGenerate = async () => {
+    setInfoCardError('');
+    setInfoCardCopied(false);
+    if (!infoCardInput.trim()) {
+      setInfoCardError('请输入信息卡片内容');
+      return;
+    }
+    setInfoCardLoading(true);
+    try {
+      const res = await fetch('/api/generate-info-card', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: infoCardInput,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setInfoCardError(data.error || '信息卡片生成失败，请稍后重试');
+      } else {
+        setInfoCardResult(data.cards);
+      }
+    } catch (e) {
+      setInfoCardError('信息卡片生成失败，请稍后重试');
+    } finally {
+      setInfoCardLoading(false);
+    }
+  };
+
+  // 信息卡片复制（复制为JSON数据）
+  const handleInfoCardCopy = () => {
+    if (infoCardResult && infoCardResult.length > 0) {
+      navigator.clipboard.writeText(JSON.stringify(infoCardResult, null, 2));
+      setInfoCardCopied(true);
+      setTimeout(() => setInfoCardCopied(false), 1500);
+    }
+  };
+
+  // 单张卡片下载
+  const handleSingleCardDownload = async (cardIndex: number) => {
+    const cardElement = document.getElementById(`info-card-preview-${cardIndex}`);
+    if (!cardElement) return;
+
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const canvas = await html2canvas(cardElement, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true,
+      });
+
+      const link = document.createElement('a');
+      link.download = `信息卡片_${cardIndex + 1}_${new Date().getTime()}.png`;
+      link.href = canvas.toDataURL();
+      link.click();
+    } catch (error) {
+      console.error('下载失败:', error);
+      setInfoCardError('信息卡片下载失败，请稍后重试');
+    }
+  };
+
+  // 批量下载所有卡片
+  const handleBatchDownload = async () => {
+    if (!infoCardResult || infoCardResult.length === 0) return;
+
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      
+      for (let i = 0; i < infoCardResult.length; i++) {
+        const cardElement = document.getElementById(`info-card-preview-${i}`);
+        if (cardElement) {
+          const canvas = await html2canvas(cardElement, {
+            backgroundColor: '#ffffff',
+            scale: 2,
+            useCORS: true,
+          });
+
+          const link = document.createElement('a');
+          link.download = `信息卡片_${i + 1}_${new Date().getTime()}.png`;
+          link.href = canvas.toDataURL();
+          link.click();
+          
+          // 稍作延迟，避免浏览器阻止多次下载
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+    } catch (error) {
+      console.error('批量下载失败:', error);
+      setInfoCardError('批量下载失败，请稍后重试');
     }
   };
 
@@ -443,17 +586,67 @@ export default function Home() {
       <Navigation />
       <section className="py-10">
         <div className="container-custom">
+          {/* 功能介绍标题 */}
+          <div className="text-center mb-10">
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">老旺AI - 小红书智能运营助手</h1>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              AI驱动的内容创作平台，一键生成爆款小红书笔记、专业封面设计，让您的内容创作更高效
+            </p>
+          </div>
+
           {/* Tabs */}
-          <div className="flex flex-wrap gap-4 mb-8">
+          <div className="flex flex-wrap gap-4 mb-8 justify-center">
             {tabs.map(tab => (
               <button
                 key={tab.key}
-                className={`px-6 py-2 rounded-full font-medium border transition-colors ${activeTab === tab.key ? 'bg-primary text-white border-primary' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'}`}
+                className={`px-6 py-3 rounded-full font-medium border transition-all duration-200 ${activeTab === tab.key ? 'bg-primary text-white border-primary shadow-lg transform scale-105' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-gray-300'}`}
                 onClick={() => setActiveTab(tab.key)}
               >
                 {tab.label}
               </button>
             ))}
+          </div>
+
+          {/* 功能说明 */}
+          <div className="mb-8 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-gray-200">
+            <div className="text-center">
+              {activeTab === 'extract' && (
+                <div>
+                  <h3 className="font-semibold text-gray-800 mb-2">📝 内容提炼</h3>
+                  <p className="text-sm text-gray-600">从任意链接提取内容，AI智能生成小红书爆款笔记，支持预设风格模板和参考爆款内容两种模式</p>
+                </div>
+              )}
+              {activeTab === 'search' && (
+                <div>
+                  <h3 className="font-semibold text-gray-800 mb-2">🔍 全网搜索</h3>
+                  <p className="text-sm text-gray-600">搜索全网热门内容，覆盖Google、微信公众号、知乎、小红书等8大平台，AI自动整合生成优质笔记</p>
+                </div>
+              )}
+              {activeTab === 'rewrite' && (
+                <div>
+                  <h3 className="font-semibold text-gray-800 mb-2">✏️ 笔记改写</h3>
+                  <p className="text-sm text-gray-600">将现有内容智能改写为不同平台风格，支持口播短视频、小红书图文、公众号文章等多种格式</p>
+                </div>
+              )}
+              {activeTab === 'card' && (
+                <div>
+                  <h3 className="font-semibold text-gray-800 mb-2">🎨 封面生成</h3>
+                  <p className="text-sm text-gray-600">AI驱动的专业封面设计工具，提供8种精美风格模板，一键生成高质量封面图片</p>
+                </div>
+              )}
+              {activeTab === 'info-card' && (
+                <div>
+                  <h3 className="font-semibold text-gray-800 mb-2">📚 信息卡片</h3>
+                  <p className="text-sm text-gray-600">AI智能分析长文内容，自动选择最适合的模板，生成2-4张精美的信息卡片，内容分配合理，视觉呈现优雅</p>
+                </div>
+              )}
+              {activeTab === 'image' && (
+                <div>
+                  <h3 className="font-semibold text-gray-800 mb-2">🖼️ 图片生成</h3>
+                  <p className="text-sm text-gray-600">AI图片生成功能正在开发中，即将为您提供更多创作可能</p>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* 内容提炼Tab */}
@@ -759,36 +952,39 @@ export default function Home() {
             </>
           )}
 
-          {/* 信息卡片、图片生成Tab */}
+          {/* 封面生成Tab */}
           {activeTab === 'card' && (
             <>
               <div className="mb-8">
-                <label className="block text-sm font-medium text-gray-700 mb-2">输入简介文案</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">输入封面文案内容</label>
                 <textarea
                   className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent h-32"
-                  placeholder="请输入需要制作信息卡片的简介文案..."
+                  placeholder="请输入您想要制作封面的核心文案内容，如标题、关键信息等..."
                   value={cardInput}
                   onChange={e => setCardInput(e.target.value)}
                   disabled={cardLoading}
                 />
+                <div className="text-xs text-gray-400 mt-1">
+                  系统将根据您输入的文案自动生成符合所选风格的专业封面设计
+                </div>
               </div>
 
               <div className="mb-8">
-                <label className="block text-sm font-medium text-gray-700 mb-4">选择封面模版</label>
+                <label className="block text-sm font-medium text-gray-700 mb-4">选择封面设计风格</label>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {cardTemplates.map(template => (
                     <div
                       key={template.key}
-                      className={`rounded-xl border p-4 cursor-pointer transition-all ${
+                      className={`rounded-xl border p-4 cursor-pointer transition-all hover:scale-105 ${
                         cardTemplate === template.key
-                          ? 'border-primary shadow-lg bg-red-50'
-                          : 'border-gray-200 bg-white hover:shadow'
+                          ? 'border-primary shadow-lg bg-blue-50 ring-2 ring-primary ring-opacity-20'
+                          : 'border-gray-200 bg-white hover:shadow-md hover:border-gray-300'
                       }`}
                       onClick={() => setCardTemplate(template.key)}
                     >
                       <div className="text-center mb-3">
                         <div className="text-2xl mb-2">{template.preview}</div>
-                        <div className="font-bold text-sm">{template.label}</div>
+                        <div className="font-bold text-sm text-gray-800">{template.label}</div>
                       </div>
                       <p className="text-xs text-gray-600 text-center leading-relaxed">
                         {template.description}
@@ -798,35 +994,53 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="mt-6 flex justify-center">
+              <div className="mt-8 flex justify-center">
                 <button
-                  className="w-full max-w-xl btn-primary py-4 text-lg"
+                  className="w-full max-w-xl btn-primary py-4 text-lg font-medium"
                   onClick={handleCardGenerate}
                   disabled={cardLoading}
                 >
-                  {cardLoading ? '生成中...' : '生成信息卡片'}
+                  {cardLoading ? (
+                    <span className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      AI设计中...
+                    </span>
+                  ) : (
+                    '🎨 生成专业封面'
+                  )}
                 </button>
               </div>
 
-              {cardError && <div className="text-red-500 text-center mt-4">{cardError}</div>}
+              {cardError && (
+                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="text-red-700 text-center">
+                    <span className="font-medium">生成失败：</span>{cardError}
+                  </div>
+                </div>
+              )}
 
               {cardResult && (
                 <div className="mt-10 max-w-2xl mx-auto">
-                  <div className="bg-white rounded-xl shadow p-6">
-                    <div className="font-bold mb-2 text-primary flex items-center justify-between">
-                      生成的信息卡片
+                  <div className="bg-white rounded-xl shadow-lg p-6">
+                    <div className="font-bold mb-4 text-primary flex items-center justify-between">
+                      <span className="flex items-center">
+                        ✨ 您的专业封面已生成
+                      </span>
                       <div className="flex gap-2">
                         <button
-                          className="px-3 py-1 text-xs rounded bg-primary text-white hover:bg-primary-dark transition-colors"
+                          className="px-4 py-2 text-sm rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors flex items-center gap-1"
                           onClick={handleCardCopy}
                         >
-                          {cardCopied ? '已复制' : '复制HTML'}
+                          {cardCopied ? '✅ 已复制' : '📋 复制代码'}
                         </button>
                         <button
-                          className="px-3 py-1 text-xs rounded bg-green-500 text-white hover:bg-green-600 transition-colors"
+                          className="px-4 py-2 text-sm rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors flex items-center gap-1"
                           onClick={handleCardDownload}
                         >
-                          下载图片
+                          💾 下载图片
                         </button>
                       </div>
                     </div>
@@ -834,17 +1048,151 @@ export default function Home() {
                       <div
                         id="card-preview"
                         dangerouslySetInnerHTML={{ __html: cardResult }}
-                        className="border-2 border-dashed border-gray-200 p-2 rounded-lg"
+                        className="border-2 border-dashed border-gray-200 p-4 rounded-lg bg-gray-50"
                       />
+                    </div>
+                    <div className="mt-4 text-xs text-gray-500 text-center">
+                      💡 提示：点击"下载图片"可保存为PNG格式，点击"复制代码"可获取HTML源码
                     </div>
                   </div>
                 </div>
               )}
             </>
           )}
+
+          {/* 信息卡片Tab */}
+          {activeTab === 'info-card' && (
+            <>
+              <div className="mb-8">
+                <label className="block text-sm font-medium text-gray-700 mb-2">输入信息卡片内容</label>
+                <textarea
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent h-32"
+                  placeholder="请输入您想要生成信息卡片的内容..."
+                  value={infoCardInput}
+                  onChange={e => setInfoCardInput(e.target.value)}
+                  disabled={infoCardLoading}
+                />
+                <div className="text-xs text-gray-400 mt-1">
+                  系统将根据您输入的内容自动生成符合所选模板的信息卡片
+                </div>
+              </div>
+
+              <div className="mt-8 flex justify-center">
+                <button
+                  className="w-full max-w-xl btn-primary py-4 text-lg font-medium"
+                  onClick={handleInfoCardGenerate}
+                  disabled={infoCardLoading}
+                >
+                  {infoCardLoading ? (
+                    <span className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      AI设计中...
+                    </span>
+                  ) : (
+                    '🎨 生成信息卡片'
+                  )}
+                </button>
+              </div>
+
+              {infoCardError && (
+                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="text-red-700 text-center">
+                    <span className="font-medium">生成失败：</span>{infoCardError}
+                  </div>
+                </div>
+              )}
+
+              {infoCardResult && infoCardResult.length > 0 && (
+                <div className="mt-10 w-full max-w-6xl mx-auto">
+                  <div className="bg-white rounded-xl shadow-lg p-6">
+                    <div className="font-bold mb-6 text-primary flex items-center justify-between">
+                      <span className="flex items-center">
+                        ✨ 您的信息卡片已生成 ({infoCardResult.length}张)
+                      </span>
+                      <div className="flex gap-2">
+                        <button
+                          className="px-4 py-2 text-sm rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors flex items-center gap-1"
+                          onClick={handleInfoCardCopy}
+                        >
+                          {infoCardCopied ? '✅ 已复制' : '📋 复制数据'}
+                        </button>
+                        <button
+                          className="px-4 py-2 text-sm rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors flex items-center gap-1"
+                          onClick={handleBatchDownload}
+                        >
+                          💾 批量下载所有卡片
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* 卡片网格布局 */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 justify-items-center">
+                      {infoCardResult.map((card, index) => {
+                        const TemplateComponent = TEMPLATE_COMPONENTS[card.type as keyof typeof TEMPLATE_COMPONENTS];
+                        if (!TemplateComponent) {
+                          console.error(`Unknown template type: ${card.type}`);
+                          return null;
+                        }
+                        return (
+                          <div key={index} className="flex flex-col items-center space-y-4 w-full max-w-md">
+                            <div id={`info-card-preview-${index}`} className="w-full">
+                              <TemplateComponent data={card} />
+                            </div>
+                            <button
+                              className="px-4 py-2 text-sm rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors shadow-sm"
+                              onClick={() => handleSingleCardDownload(index)}
+                            >
+                              📥 下载第{index + 1}张卡片
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    <div className="mt-6 text-xs text-gray-500 text-center">
+                      💡 提示：点击"下载第X张卡片"可下载单张卡片，点击"批量下载所有卡片"可下载所有卡片
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
           {activeTab === 'image' && (
-            <div className="text-center text-gray-400 py-32 text-lg">
-              图片生成功能开发中，敬请期待...
+            <div className="text-center py-20">
+              <div className="max-w-md mx-auto">
+                <div className="text-6xl mb-6">🚀</div>
+                <h3 className="text-2xl font-bold text-gray-800 mb-4">AI图片生成</h3>
+                <p className="text-gray-600 mb-6 leading-relaxed">
+                  我们正在开发强大的AI图片生成功能，将为您提供：
+                </p>
+                <div className="text-left bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                  <ul className="space-y-3 text-sm text-gray-700">
+                    <li className="flex items-start gap-2">
+                      <span className="text-green-500 mt-0.5">✓</span>
+                      <span>文字转图片生成</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-green-500 mt-0.5">✓</span>
+                      <span>小红书风格配图</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-green-500 mt-0.5">✓</span>
+                      <span>多种艺术风格选择</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-green-500 mt-0.5">✓</span>
+                      <span>高清图片输出</span>
+                    </li>
+                  </ul>
+                </div>
+                <p className="text-gray-500 text-sm mt-6">
+                  🎉 即将上线，敬请期待！
+                </p>
+              </div>
             </div>
           )}
         </div>

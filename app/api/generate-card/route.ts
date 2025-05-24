@@ -3,11 +3,11 @@ import { NextRequest, NextResponse } from 'next/server';
 // 建议实际部署时用 process.env 存储密钥
 const DEEPSEEK_API_KEY = 'sk-28c73a6d126d45ae9d5237427ba65bde'; // DeepSeek API Key
 
-// 卡片模板配置
+// 封面模板配置
 const cardTemplates = {
   flowing_tech_blue: {
     name: '流动科技蓝风格',
-    prompt: `请基于以下简介文案，生成一个流动科技蓝风格的HTML+CSS信息卡片。要求：
+    prompt: `请基于以下简介文案，生成一个流动科技蓝风格的HTML+CSS封面。要求：
 
 设计规格：
 - 宽高比：3:4 (例如：300px × 400px)
@@ -25,8 +25,8 @@ const cardTemplates = {
 简介文案：`,
   },
   soft_rounded_card: {
-    name: '圆角卡片温柔风格',
-    prompt: `请基于以下简介文案，生成一个圆角卡片温柔风格的HTML+CSS信息卡片。要求：
+    name: '圆角温柔风格',
+    prompt: `请基于以下简介文案，生成一个圆角温柔风格的HTML+CSS封面。要求：
 
 设计规格：
 - 宽高比：3:4 (例如：300px × 400px)
@@ -35,7 +35,7 @@ const cardTemplates = {
 - 微妙阴影效果
 
 设计元素：
-- 圆角卡片布局
+- 圆角布局设计
 - 温柔色彩搭配
 - 网格布局思维
 - 温暖亲切的字体排版
@@ -46,8 +46,8 @@ const cardTemplates = {
 简介文案：`,
   },
   modern_business_info: {
-    name: '现代商务资讯卡片风',
-    prompt: `请基于以下简介文案，生成一个现代商务资讯卡片风格的HTML+CSS信息卡片。要求：
+    name: '现代商务资讯风',
+    prompt: `请基于以下简介文案，生成一个现代商务资讯风格的HTML+CSS封面。要求：
 
 设计规格：
 - 宽高比：3:4 (例如：300px × 400px)
@@ -57,7 +57,7 @@ const cardTemplates = {
 设计元素：
 - 专业商务布局
 - 绿红颜色编码（涨跌、好坏等）
-- 卡片式信息分组
+- 专业式信息分组
 - 商务图标和符号
 - 专业字体排版
 
@@ -67,7 +67,7 @@ const cardTemplates = {
   },
   minimal_grid: {
     name: '极简格栅主义封面风格',
-    prompt: `请基于以下简介文案，生成一个极简格栅主义封面风格的HTML+CSS信息卡片。要求：
+    prompt: `请基于以下简介文案，生成一个极简格栅主义封面风格的HTML+CSS封面。要求：
 
 设计规格：
 - 宽高比：3:4 (例如：300px × 400px)
@@ -88,7 +88,7 @@ const cardTemplates = {
   },
   industrial_rebellion: {
     name: '新潮工业反叛风',
-    prompt: `请基于以下简介文案，生成一个新潮工业反叛风格的HTML+CSS信息卡片。要求：
+    prompt: `请基于以下简介文案，生成一个新潮工业反叛风格的HTML+CSS封面。要求：
 
 设计规格：
 - 宽高比：3:4 (例如：300px × 400px)
@@ -109,7 +109,7 @@ const cardTemplates = {
   },
   tech_knowledge_sharing: {
     name: '科技感知识分享',
-    prompt: `请基于以下简介文案，生成一个科技感知识分享风格的HTML+CSS信息卡片。要求：
+    prompt: `请基于以下简介文案，生成一个科技感知识分享风格的HTML+CSS封面。要求：
 
 设计规格：
 - 宽高比：3:4 (例如：300px × 400px)
@@ -130,7 +130,7 @@ const cardTemplates = {
   },
   scene_photo_xiaohongshu: {
     name: '场景图片小红书封面',
-    prompt: `请基于以下简介文案，生成一个场景图片小红书封面风格的HTML+CSS信息卡片。要求：
+    prompt: `请基于以下简介文案，生成一个场景图片小红书封面风格的HTML+CSS封面。要求：
 
 设计规格：
 - 宽高比：3:4 (例如：300px × 400px)
@@ -151,7 +151,7 @@ const cardTemplates = {
   },
   luxury_natural_artistic: {
     name: '奢华自然意境风',
-    prompt: `请基于以下简介文案，生成一个奢华自然意境风格的HTML+CSS信息卡片。要求：
+    prompt: `请基于以下简介文案，生成一个奢华自然意境风格的HTML+CSS封面。要求：
 
 设计规格：
 - 宽高比：3:4 (例如：300px × 400px)
@@ -177,7 +177,7 @@ export async function POST(req: NextRequest) {
     const { text, template } = await req.json();
 
     if (!text) {
-      return NextResponse.json({ error: 1, message: '缺少简介文案' }, { status: 400 });
+      return NextResponse.json({ error: 1, message: '缺少封面文案内容' }, { status: 400 });
     }
 
     if (!template || !cardTemplates[template as keyof typeof cardTemplates]) {
@@ -187,7 +187,7 @@ export async function POST(req: NextRequest) {
     const selectedTemplate = cardTemplates[template as keyof typeof cardTemplates];
     const prompt = selectedTemplate.prompt + '\n\n' + text;
 
-    // 使用 DeepSeek API 生成卡片内容
+    // 使用 DeepSeek API 生成封面内容
     const deepseekRes = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -199,49 +199,35 @@ export async function POST(req: NextRequest) {
         messages: [
           {
             role: 'system',
-            content: `你是一个专业的UI/UX设计师和前端开发者，擅长制作各种风格的HTML+CSS信息卡片。
-
-核心要求：
-1. 输出完整的HTML结构，包含内联CSS样式
-2. 确保宽高比为3:4（例如：width: 300px; height: 400px）
-3. 使用现代CSS技术：flexbox、grid、渐变、阴影等
-4. 字体选择要符合设计风格
-5. 颜色搭配要专业且符合主题
-6. 布局要清晰，层次分明
-7. 添加适当的视觉装饰元素
-
-输出格式要求：
-- 只返回完整的HTML代码，包含内联CSS
-- 不要包含任何markdown代码块标记（如 \`\`\`html 或 \`\`\`）
-- 不要包含任何解释说明文字
-- 直接从<div>或<html>标签开始
-- 确保HTML可以直接在浏览器中渲染`,
+            content:
+              '你是一个专业的UI/UX设计师和前端开发者，擅长制作各种风格的HTML+CSS封面。你的设计作品总是能够完美平衡美观性和功能性，深受用户喜爱。请确保生成的HTML代码可以直接渲染，CSS样式要内联在HTML中。',
           },
           { role: 'user', content: prompt },
         ],
         temperature: 0.8,
-        max_tokens: 2000,
+        max_tokens: 2500,
       }),
     });
 
-    const deepseekData = await deepseekRes.json();
-    let result = deepseekData?.choices?.[0]?.message?.content || '';
-
-    if (!result) {
-      return NextResponse.json({ error: 3, message: '卡片生成失败' }, { status: 500 });
+    if (!deepseekRes.ok) {
+      console.error('DeepSeek API error:', deepseekRes.status, deepseekRes.statusText);
+      return NextResponse.json({ error: 2, message: 'AI服务异常，请稍后重试' }, { status: 502 });
     }
 
-    // 清理markdown代码块标记
-    result = result
-      .replace(/```html\s*/gi, '') // 移除开始的```html
-      .replace(/```\s*$/gi, '') // 移除结尾的```
-      .replace(/^```\s*/gi, '') // 移除开头的```
-      .trim(); // 清理首尾空白
+    const deepseekData = await deepseekRes.json();
+    const result = deepseekData?.choices?.[0]?.message?.content || '';
 
-    console.log('Card generation completed for template:', template);
-    return NextResponse.json({ result });
-  } catch (e) {
-    console.error('Error:', e);
-    return NextResponse.json({ error: 500, message: '服务器异常' }, { status: 500 });
+    if (!result || result.trim().length === 0) {
+      console.error('Empty result from DeepSeek:', deepseekData);
+      return NextResponse.json({ error: 3, message: '封面生成失败' }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      result: result.trim(),
+      template: selectedTemplate.name,
+    });
+  } catch (error) {
+    console.error('Generate card API error:', error);
+    return NextResponse.json({ error: 500, message: '封面生成服务异常，请稍后重试' }, { status: 500 });
   }
 }
