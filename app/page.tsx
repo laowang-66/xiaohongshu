@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Navigation from './components/Navigation';
 import { TEMPLATE_COMPONENTS } from './components/InfoCardTemplates';
+import CoverTemplatePreview from './components/CoverTemplatePreview';
 
 const tabs = [
   { key: 'extract', label: '内容提炼' },
@@ -102,55 +103,91 @@ const searchTypes = [
   { key: 'twitter', label: 'Twitter', icon: '🐦' },
 ];
 
+// 封面尺寸配置
+const coverSizes = [
+  {
+    key: 'xiaohongshu',
+    label: '小红书封面',
+    ratio: '3:4',
+    size: '900×1200',
+    description: '小红书图文封面，垂直布局',
+    icon: '📱'
+  },
+  {
+    key: 'video',
+    label: '短视频封面',
+    ratio: '9:16', 
+    size: '1080×1920',
+    description: '抖音/快手/视频号封面',
+    icon: '📺'
+  },
+  {
+    key: 'wechat',
+    label: '公众号封面',
+    ratio: '3.35:1',
+    size: '900×268',
+    description: '微信公众号文章封面，包含朋友圈分享图',
+    icon: '📰'
+  }
+];
+
 // 封面模板配置
 const cardTemplates = [
   {
+    key: 'scene_photo_xiaohongshu',
+    label: '小红书经典风格',
+    description: '橙黄渐变背景，醒目标题，适合生活分享、经验总结类内容',
+    preview: '📸💛',
+    category: '生活分享'
+  },
+  {
     key: 'flowing_tech_blue',
-    label: '流动科技蓝风格',
-    description: '现代科技蓝色调，流动曲线设计，蓝白渐变，几何元素，清新简洁',
-    preview: '🌊💙 流动科技蓝',
+    label: '科技蓝商务风',
+    description: '蓝色科技渐变，专业大气，适合科技、商务、知识分享类内容',
+    preview: '🚀💙',
+    category: '科技商务'
   },
   {
     key: 'soft_rounded_card',
-    label: '圆角温柔风格',
-    description: '温柔色彩搭配，圆角设计，紫黄粉米色调，极简主义，网格布局',
-    preview: '🌸💜 圆角温柔',
+    label: '温柔圆角风格',
+    description: '温柔色彩搭配，圆角设计，适合美妆、穿搭、情感类内容',
+    preview: '💜🌸',
+    category: '美妆时尚'
   },
   {
     key: 'modern_business_info',
-    label: '现代商务资讯风',
-    description: '商务专业风格，绿红颜色编码，专业式布局，三级层次，商务美学',
-    preview: '💼📊 商务资讯',
+    label: '商务资讯风格',
+    description: '专业商务色调，权威感强，适合财经、职场、资讯类内容',
+    preview: '💼📊',
+    category: '商务职场'
   },
   {
     key: 'minimal_grid',
-    label: '极简格栅主义封面风格',
-    description: '极简网格设计，黑白对比，几何元素，严格网格，摄影融合',
-    preview: '⬛⬜ 极简格栅',
+    label: '极简黑白风格',
+    description: '黑白极简设计，高级感强，适合艺术、设计、文艺类内容',
+    preview: '⬛⬜',
+    category: '艺术设计'
   },
   {
     key: 'industrial_rebellion',
-    label: '新潮工业反叛风',
-    description: '工业反叛风格，黑色背景，高对比度，地下文化，解构主义字体',
-    preview: '🖤⚡ 工业反叛',
+    label: '工业反叛风格',
+    description: '暗黑高对比，个性张扬，适合潮流、音乐、创意类内容',
+    preview: '⚡🖤',
+    category: '潮流创意'
   },
   {
     key: 'tech_knowledge_sharing',
-    label: '科技感知识分享',
-    description: '深蓝科技色调，几何图形元素，技术符号，专业化设计，权威感',
-    preview: '🔷🤖 科技知识',
-  },
-  {
-    key: 'scene_photo_xiaohongshu',
-    label: '场景图片小红书封面',
-    description: '现实场景背景，黄色醒目标题，真实备考照片，代入感强',
-    preview: '📸💛 场景封面',
+    label: '深蓝知识风格',
+    description: '深蓝科技色调，专业权威，适合技术、教育、科普类内容',
+    preview: '🔷💡',
+    category: '教育科普'
   },
   {
     key: 'luxury_natural_artistic',
-    label: '奢华自然意境风',
-    description: '高级沉稳色调，暗调景观背景，东西方美学融合，摄影级光影',
-    preview: '✨ 奢华意境',
+    label: '奢华自然风格',
+    description: '奢华自然色调，高端大气，适合旅行、美食、生活品质类内容',
+    preview: '✨🍃',
+    category: '高端生活'
   },
 ];
 
@@ -230,8 +267,10 @@ export default function Home() {
 
   // 封面生成专用
   const [cardInput, setCardInput] = useState('');
-  const [cardTemplate, setCardTemplate] = useState('flowing_tech_blue');
+  const [cardTemplate, setCardTemplate] = useState('scene_photo_xiaohongshu');
+  const [cardSize, setCardSize] = useState('xiaohongshu');
   const [cardResult, setCardResult] = useState('');
+  const [cardResultInfo, setCardResultInfo] = useState<any>(null);
   const [cardLoading, setCardLoading] = useState(false);
   const [cardError, setCardError] = useState('');
   const [cardCopied, setCardCopied] = useState(false);
@@ -428,6 +467,7 @@ export default function Home() {
   const handleCardGenerate = async () => {
     setCardError('');
     setCardResult('');
+    setCardResultInfo(null);
     setCardCopied(false);
     if (!cardInput.trim()) {
       setCardError('请输入封面文案内容');
@@ -441,6 +481,7 @@ export default function Home() {
         body: JSON.stringify({
           text: cardInput,
           template: cardTemplate,
+          coverSize: cardSize,
         }),
       });
       const data = await res.json();
@@ -448,6 +489,7 @@ export default function Home() {
         setCardError(data.message || '封面生成失败，请稍后重试');
       } else {
         setCardResult(data.result);
+        setCardResultInfo(data);
       }
     } catch (e) {
       setCardError('封面生成失败，请稍后重试');
@@ -467,21 +509,50 @@ export default function Home() {
 
   // 封面下载图片
   const handleCardDownload = async () => {
-    const cardElement = document.getElementById('card-content-only');
-    if (!cardElement) return;
+    if (!cardResult || !cardResultInfo?.dimensions) return;
 
     try {
-      const html2canvas = (await import('html2canvas')).default;
-      const canvas = await html2canvas(cardElement, {
-        backgroundColor: '#ffffff',
-        scale: 2,
-        useCORS: true,
-      });
+      // 创建一个临时容器，确保使用原始尺寸进行截图
+      const tempContainer = document.createElement('div');
+      tempContainer.style.position = 'absolute';
+      tempContainer.style.top = '-9999px';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.zIndex = '-9999';
+      tempContainer.innerHTML = cardResult;
+      document.body.appendChild(tempContainer);
 
-      const link = document.createElement('a');
-      link.download = `小红书封面_${new Date().getTime()}.png`;
-      link.href = canvas.toDataURL();
-      link.click();
+      const tempElement = tempContainer.firstChild as HTMLElement;
+      const { width, height } = cardResultInfo.dimensions;
+      
+      if (tempElement) {
+        // 确保临时元素使用原始尺寸，移除任何变换
+        tempElement.style.width = `${width}px`;
+        tempElement.style.height = `${height}px`;
+        tempElement.style.transform = 'none';
+        tempElement.style.transformOrigin = 'initial';
+        tempElement.style.margin = '0';
+        tempElement.style.padding = '0';
+
+        const html2canvas = (await import('html2canvas')).default;
+        const canvas = await html2canvas(tempElement, {
+          backgroundColor: null,
+          width: width,
+          height: height,
+          scale: 2, // 提高分辨率
+          useCORS: true,
+          allowTaint: true,
+          foreignObjectRendering: true,
+        });
+
+        const link = document.createElement('a');
+        const sizeLabel = coverSizes.find(s => s.key === cardSize)?.label || '封面';
+        link.download = `${sizeLabel}_${width}x${height}_${new Date().getTime()}.png`;
+        link.href = canvas.toDataURL('image/png', 1.0);
+        link.click();
+      }
+
+      // 清理临时容器
+      document.body.removeChild(tempContainer);
     } catch (error) {
       console.error('下载失败:', error);
       setCardError('封面下载失败，请稍后重试');
@@ -956,6 +1027,33 @@ export default function Home() {
           {activeTab === 'card' && (
             <>
               <div className="mb-8">
+                <label className="block text-sm font-medium text-gray-700 mb-4">选择封面尺寸</label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                  {coverSizes.map(size => (
+                    <div
+                      key={size.key}
+                      className={`rounded-xl border p-4 cursor-pointer transition-all duration-300 ${
+                        cardSize === size.key
+                          ? 'border-primary shadow-xl bg-blue-50 ring-2 ring-primary ring-opacity-30 transform scale-105'
+                          : 'border-gray-200 bg-white hover:shadow-lg hover:border-gray-300 hover:scale-102'
+                      }`}
+                      onClick={() => setCardSize(size.key)}
+                    >
+                      <div className="text-center">
+                        <div className="text-2xl mb-2">{size.icon}</div>
+                        <div className="font-bold text-sm text-gray-800 mb-1">
+                          {size.label}
+                        </div>
+                        <div className="text-xs text-primary font-medium mb-2">
+                          {size.ratio} • {size.size}
+                        </div>
+                        <p className="text-xs text-gray-600 leading-relaxed">
+                          {size.description}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">输入封面文案内容</label>
                 <textarea
                   className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent h-32"
@@ -967,28 +1065,66 @@ export default function Home() {
                 <div className="text-xs text-gray-400 mt-1">
                   系统将根据您输入的文案自动生成符合所选风格的专业封面设计
                 </div>
+                
+                {/* 示例文案 */}
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
+                  <div className="text-xs font-medium text-gray-700 mb-2">💡 文案示例（点击快速使用）：</div>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      "震惊！一个月涨粉5000+！我的公众号运营秘籍全在这！",
+                      "5款热门面膜实测！这款性价比居然最高？",
+                      "零基础学编程！30天从小白到大神的逆袭之路",
+                      "日本关西5日游攻略！人均3000元玩转大阪京都",
+                      "AI工具盘点！这10个神器让工作效率翻倍"
+                    ].map((example, index) => (
+                      <button
+                        key={index}
+                        className="text-xs px-3 py-1 bg-white border border-gray-200 rounded-full hover:bg-primary hover:text-white hover:border-primary transition-colors"
+                        onClick={() => setCardInput(example)}
+                        disabled={cardLoading}
+                      >
+                        {example.length > 25 ? example.substring(0, 25) + '...' : example}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <div className="mb-8">
                 <label className="block text-sm font-medium text-gray-700 mb-4">选择封面设计风格</label>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                   {cardTemplates.map(template => (
                     <div
                       key={template.key}
-                      className={`rounded-xl border p-4 cursor-pointer transition-all hover:scale-105 ${
+                      className={`rounded-xl border cursor-pointer transition-all duration-300 ${
                         cardTemplate === template.key
-                          ? 'border-primary shadow-lg bg-blue-50 ring-2 ring-primary ring-opacity-20'
-                          : 'border-gray-200 bg-white hover:shadow-md hover:border-gray-300'
+                          ? 'border-primary shadow-xl bg-blue-50 ring-2 ring-primary ring-opacity-30 transform scale-105'
+                          : 'border-gray-200 bg-white hover:shadow-lg hover:border-gray-300 hover:scale-102'
                       }`}
                       onClick={() => setCardTemplate(template.key)}
                     >
-                      <div className="text-center mb-3">
-                        <div className="text-2xl mb-2">{template.preview}</div>
-                        <div className="font-bold text-sm text-gray-800">{template.label}</div>
+                      {/* 预览区域 */}
+                      <div className="p-4 flex justify-center">
+                        <CoverTemplatePreview 
+                          templateKey={template.key} 
+                          isSelected={cardTemplate === template.key}
+                        />
                       </div>
-                      <p className="text-xs text-gray-600 text-center leading-relaxed">
-                        {template.description}
-                      </p>
+                      
+                      {/* 信息区域 */}
+                      <div className="px-4 pb-4">
+                        <div className="text-center mb-2">
+                          <div className="font-bold text-sm text-gray-800 mb-1">
+                            {template.label}
+                          </div>
+                          <div className="text-xs text-primary font-medium bg-primary bg-opacity-10 px-2 py-1 rounded-full inline-block">
+                            {template.category}
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-600 text-center leading-relaxed">
+                          {template.description}
+                        </p>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1027,7 +1163,12 @@ export default function Home() {
                   <div className="bg-white rounded-xl shadow-lg p-6">
                     <div className="font-bold mb-4 text-primary flex items-center justify-between">
                       <span className="flex items-center">
-                        ✨ 您的专业封面已生成
+                        ✨ 您的{cardResultInfo?.coverSize}已生成
+                        {cardResultInfo?.dimensions && (
+                          <span className="ml-2 text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                            {cardResultInfo.dimensions.width}×{cardResultInfo.dimensions.height} ({cardResultInfo.dimensions.ratio})
+                          </span>
+                        )}
                       </span>
                       <div className="flex gap-2">
                         <button
@@ -1045,19 +1186,61 @@ export default function Home() {
                       </div>
                     </div>
                     <div className="mt-4 flex justify-center">
-                      {/* 显示用的容器 - 包含装饰边框 */}
-                      <div
-                        id="card-preview"
-                        dangerouslySetInnerHTML={{ __html: cardResult }}
-                        className="border-2 border-dashed border-gray-200 p-4 rounded-lg bg-gray-50"
-                      />
-                      {/* 纯净的内容容器 - 仅用于下载，隐藏显示 */}
-                      <div
-                        id="card-content-only"
-                        dangerouslySetInnerHTML={{ __html: cardResult }}
-                        className="absolute left-[-9999px] top-[-9999px]"
-                        style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}
-                      />
+                      {/* 动态封面显示 - 适配不同尺寸 */}
+                      <div className="shadow-2xl rounded-lg" style={{ 
+                        overflow: 'visible',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'flex-start',
+                        width: '100%',
+                        minHeight: '200px'
+                      }}>
+                        <div
+                          id="card-content-only"
+                          dangerouslySetInnerHTML={{ 
+                            __html: (() => {
+                              try {
+                                return cardResult.replace(/\\u[\dA-F]{4}/gi, function(match: string) {
+                                  return String.fromCharCode(parseInt(match.replace(/\\u/g, ''), 16));
+                                });
+                              } catch (e) {
+                                console.error('Unicode decode error:', e);
+                                return cardResult;
+                              }
+                            })()
+                          }}
+                          className="block"
+                          style={(() => {
+                            if (!cardResultInfo?.dimensions) return { fontFamily: 'system-ui, -apple-system, sans-serif' };
+                            const { width, height } = cardResultInfo.dimensions;
+                            
+                            // 计算合适的缩放比例，确保内容完整显示
+                            const maxDisplayWidth = 450; // 固定最大宽度
+                            let scale = 1;
+                            
+                            // 根据不同尺寸计算缩放比例
+                            if (cardSize === 'wechat') {
+                              // 公众号封面 - 横向布局，按高度缩放
+                              scale = Math.min(maxDisplayWidth / width, 300 / height, 1);
+                            } else if (cardSize === 'video') {
+                              // 短视频封面 - 很长，需要更小的缩放
+                              scale = Math.min(maxDisplayWidth / width, 400 / height, 0.3);
+                            } else {
+                              // 小红书封面 - 3:4比例
+                              scale = Math.min(maxDisplayWidth / width, 600 / height, 0.5);
+                            }
+                            
+                            return {
+                              transform: `scale(${scale})`,
+                              transformOrigin: 'top center',
+                              width: `${width}px`,
+                              height: `${height}px`,
+                              margin: '0 auto',
+                              fontFamily: 'system-ui, -apple-system, sans-serif'
+                            };
+                          })()}
+                        />
+                      </div>
                     </div>
                     <div className="mt-4 text-xs text-gray-500 text-center">
                       💡 提示：点击"下载图片"可保存为PNG格式，点击"复制代码"可获取HTML源码
