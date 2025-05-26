@@ -467,7 +467,7 @@ export default function Home() {
 
   // 封面下载图片
   const handleCardDownload = async () => {
-    const cardElement = document.getElementById('card-preview');
+    const cardElement = document.getElementById('card-content-only');
     if (!cardElement) return;
 
     try {
@@ -1045,10 +1045,18 @@ export default function Home() {
                       </div>
                     </div>
                     <div className="mt-4 flex justify-center">
+                      {/* 显示用的容器 - 包含装饰边框 */}
                       <div
                         id="card-preview"
                         dangerouslySetInnerHTML={{ __html: cardResult }}
                         className="border-2 border-dashed border-gray-200 p-4 rounded-lg bg-gray-50"
+                      />
+                      {/* 纯净的内容容器 - 仅用于下载，隐藏显示 */}
+                      <div
+                        id="card-content-only"
+                        dangerouslySetInnerHTML={{ __html: cardResult }}
+                        className="absolute left-[-9999px] top-[-9999px]"
+                        style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}
                       />
                     </div>
                     <div className="mt-4 text-xs text-gray-500 text-center">
