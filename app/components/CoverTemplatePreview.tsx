@@ -245,6 +245,187 @@ const CoverTemplatePreview: React.FC<CoverTemplatePreviewProps> = ({ templateKey
           </div>
         );
 
+      // 增强模板预览
+      case 'modern_gradient_card':
+        return (
+          <div style={{
+            ...baseStyle,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            padding: '8px',
+            color: '#ffffff',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            position: 'relative',
+            backdropFilter: 'blur(10px)'
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: '10px',
+              right: '10px',
+              width: '12px',
+              height: '12px',
+              background: 'rgba(255,255,255,0.3)',
+              borderRadius: '50%'
+            }}></div>
+            <div style={{ fontSize: '9px', fontWeight: 'bold', marginBottom: '4px', textAlign: 'center' }}>
+              🌈 现代渐变
+            </div>
+            <div style={{ fontSize: '6px', opacity: 0.9, textAlign: 'center', lineHeight: 1.2 }}>
+              时尚科技<br/>玻璃质感
+            </div>
+          </div>
+        );
+
+      case 'neon_cyber_style':
+        return (
+          <div style={{
+            ...baseStyle,
+            background: 'linear-gradient(135deg, #000428 0%, #004e92 100%)',
+            padding: '8px',
+            color: '#00d2ff',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            position: 'relative',
+            border: '1px solid #00d2ff'
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: '5px',
+              right: '5px',
+              width: '8px',
+              height: '8px',
+              background: '#ff0080',
+              borderRadius: '50%',
+              boxShadow: '0 0 10px #ff0080'
+            }}></div>
+            <div style={{ fontSize: '9px', fontWeight: 'bold', marginBottom: '4px', textShadow: '0 0 5px #00d2ff' }}>
+              🔮 霓虹赛博
+            </div>
+            <div style={{ fontSize: '6px', color: '#00ff88', textAlign: 'center', lineHeight: 1.2 }}>
+              未来科技<br/>电子光影
+            </div>
+          </div>
+        );
+
+      case 'elegant_minimal':
+        return (
+          <div style={{
+            ...baseStyle,
+            background: '#f8f9fa',
+            padding: '12px',
+            color: '#495057',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            border: '1px solid #e9ecef'
+          }}>
+            <div style={{
+              width: '40px',
+              height: '1px',
+              background: '#6c757d',
+              marginBottom: '8px'
+            }}></div>
+            <div style={{ fontSize: '8px', fontWeight: 'bold', marginBottom: '6px', textAlign: 'center', letterSpacing: '1px' }}>
+              优雅极简
+            </div>
+            <div style={{ fontSize: '5px', color: '#6c757d', textAlign: 'center' }}>
+              简约之美
+            </div>
+          </div>
+        );
+
+      case 'organic_nature':
+        return (
+          <div style={{
+            ...baseStyle,
+            background: 'linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%)',
+            padding: '8px',
+            color: '#2e7d32',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            borderRadius: '20px'
+          }}>
+            <div style={{ fontSize: '10px', marginBottom: '4px' }}>🌿</div>
+            <div style={{ fontSize: '8px', fontWeight: 'bold', marginBottom: '3px', textAlign: 'center' }}>
+              有机自然
+            </div>
+            <div style={{ fontSize: '6px', color: '#388e3c', textAlign: 'center', lineHeight: 1.2 }}>
+              温暖生活<br/>自然曲线
+            </div>
+          </div>
+        );
+
+      case 'retro_vintage':
+        return (
+          <div style={{
+            ...baseStyle,
+            background: 'linear-gradient(135deg, #d4a574 0%, #8b6f47 100%)',
+            padding: '8px',
+            color: '#ffffff',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            textAlign: 'center',
+            position: 'relative'
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: '5px',
+              left: '5px',
+              width: '20px',
+              height: '20px',
+              border: '2px solid rgba(255,255,255,0.3)',
+              borderRadius: '50%'
+            }}></div>
+            <div style={{ fontSize: '9px', marginBottom: '4px' }}>📻</div>
+            <div style={{ fontSize: '8px', fontWeight: 'bold', marginBottom: '3px' }}>
+              复古怀旧
+            </div>
+            <div style={{ fontSize: '5px', opacity: 0.9, lineHeight: 1.2 }}>
+              经典质感<br/>岁月印记
+            </div>
+          </div>
+        );
+
+      case 'playful_dynamic':
+        return (
+          <div style={{
+            ...baseStyle,
+            background: 'linear-gradient(135deg, #ff6b6b 0%, #4ecdc4 50%, #45b7d1 100%)',
+            padding: '8px',
+            color: '#ffffff',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            position: 'relative'
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: '8px',
+              right: '8px',
+              width: '0',
+              height: '0',
+              borderLeft: '6px solid transparent',
+              borderRight: '6px solid transparent',
+              borderBottom: '8px solid #f9ca24'
+            }}></div>
+            <div style={{ fontSize: '9px', fontWeight: 'bold', marginBottom: '4px', textAlign: 'center' }}>
+              🎨 活力动感
+            </div>
+            <div style={{ fontSize: '6px', textAlign: 'center', lineHeight: 1.2 }}>
+              青春活泼<br/>趣味图形
+            </div>
+          </div>
+        );
+
       default:
         return (
           <div style={{

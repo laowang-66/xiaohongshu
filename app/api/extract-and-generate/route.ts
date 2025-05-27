@@ -3,7 +3,7 @@ import { Search1APIUtil } from '@/app/utils/search1api-util';
 
 // 建议实际部署时用 process.env 存储密钥
 const SEARCH1API_KEY = '5045B583-386E-45A0-89E8-4E2CC105AB08'; // Search1API Key
-const DEEPSEEK_API_KEY = 'sk-28c73a6d126d45ae9d5237427ba65bde'; // DeepSeek API Key
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 
 export async function POST(req: NextRequest) {
   try {
