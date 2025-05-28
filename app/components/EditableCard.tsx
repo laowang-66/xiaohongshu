@@ -33,6 +33,7 @@ const EditableCard: React.FC<EditableCardProps> = ({
   onContentChange 
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const downloadContainerRef = useRef<HTMLDivElement>(null);
   const textParserRef = useRef<TextParser | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [editingElement, setEditingElement] = useState<EditingElement | null>(null);
@@ -158,9 +159,120 @@ const EditableCard: React.FC<EditableCardProps> = ({
     setIsReady(false);
   };
 
-  // 处理编辑保存
-  const handleEditSave = (newText: string, newStyle: any) => {
+  // 同步下载容器内容 - 改进版本
+  const syncDownloadContainer = () => {
+    if (containerRef.current && downloadContainerRef.current) {
+      // 克隆编辑容器的内容
+      const clonedContent = containerRef.current.cloneNode(true) as HTMLElement;
+      
+      // 更全面的样式清理函数
+      const cleanEditingStyles = (element: HTMLElement) => {
+        // 移除编辑相关的样式
+        const stylesToRemove = [
+          'cursor', 'transition', 'backgroundColor', 'outline', 
+          'outlineOffset', 'border', 'borderRadius', 'padding', 
+          'margin', 'boxShadow', 'opacity', 'transform'
+        ];
+        
+        stylesToRemove.forEach(prop => {
+          element.style.removeProperty(prop);
+        });
+        
+        // 移除编辑相关的类名
+        element.classList.remove('editable-element', 'editable-hint');
+        
+        // 移除data属性
+        element.removeAttribute('data-editable-id');
+        element.removeAttribute('data-text-element');
+        
+        // 确保保留原始的样式属性
+        const originalStyle = element.getAttribute('style');
+        if (originalStyle) {
+          // 清理编辑相关的样式，但保留原始样式
+          const cleanedStyle = originalStyle
+            .replace(/cursor:\s*[^;]+;?/g, '')
+            .replace(/transition:\s*[^;]+;?/g, '')
+            .replace(/background-color:\s*rgba\(59,\s*130,\s*246[^)]*\);?/g, '')
+            .replace(/outline[^:]*:\s*[^;]*rgba\(59,\s*130,\s*246[^)]*\)[^;]*;?/g, '')
+            .replace(/box-shadow:\s*[^;]*rgba\(59,\s*130,\s*246[^)]*\)[^;]*;?/g, '')
+            .replace(/;\s*;/g, ';')
+            .replace(/^\s*;\s*/, '')
+            .replace(/\s*;\s*$/, '');
+          
+          if (cleanedStyle.trim()) {
+            element.setAttribute('style', cleanedStyle);
+          } else {
+            element.removeAttribute('style');
+          }
+        }
+        
+        // 递归清理子元素
+        const children = element.children;
+        for (let i = 0; i < children.length; i++) {
+          cleanEditingStyles(children[i] as HTMLElement);
+        }
+      };
+      
+      // 清理所有编辑样式
+      cleanEditingStyles(clonedContent);
+      
+      // 确保下载容器有正确的样式
+      downloadContainerRef.current.style.width = `${dimensions.width}px`;
+      downloadContainerRef.current.style.height = `${dimensions.height}px`;
+      downloadContainerRef.current.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+      downloadContainerRef.current.style.transform = 'none';
+      downloadContainerRef.current.style.transformOrigin = 'initial';
+      downloadContainerRef.current.style.position = 'absolute';
+      downloadContainerRef.current.style.left = '-9999px';
+      downloadContainerRef.current.style.top = '-9999px';
+      downloadContainerRef.current.style.visibility = 'hidden';
+      downloadContainerRef.current.style.overflow = 'hidden';
+      
+      // 设置下载容器的内容
+      downloadContainerRef.current.innerHTML = clonedContent.innerHTML;
+      
+      console.log('✅ 下载容器内容已同步并清理样式');
+      console.log('📏 下载容器尺寸:', dimensions.width, 'x', dimensions.height);
+      console.log('📄 下载容器内容长度:', downloadContainerRef.current.innerHTML.length);
+      
+      // 验证同步结果
+      const downloadHTML = downloadContainerRef.current.innerHTML;
+      if (downloadHTML.includes('rgba(59, 130, 246') || downloadHTML.includes('editable-')) {
+        console.warn('⚠️ 下载容器中仍包含编辑样式，需要进一步清理');
+      } else {
+        console.log('✅ 下载容器样式清理验证通过');
+      }
+    }
+  };
+
+  // 强制同步下载容器 - 新增方法
+  const forceSyncDownloadContainer = () => {
+    return new Promise<void>((resolve) => {
+      // 多次尝试同步，确保稳定性
+      let attempts = 0;
+      const maxAttempts = 3;
+      
+      const attemptSync = () => {
+        attempts++;
+        syncDownloadContainer();
+        
+        if (attempts < maxAttempts) {
+          setTimeout(attemptSync, 50);
+        } else {
+          console.log(`🔄 完成${maxAttempts}次同步尝试`);
+          resolve();
+        }
+      };
+      
+      attemptSync();
+    });
+  };
+
+  // 处理编辑保存 - 改进版本
+  const handleEditSave = async (newText: string, newStyle: any) => {
     if (!editingElement || !textParserRef.current) return;
+
+    console.log('🎨 开始保存编辑:', newText);
 
     // 更新文本元素
     const success = textParserRef.current.updateTextElement(
@@ -170,14 +282,21 @@ const EditableCard: React.FC<EditableCardProps> = ({
     );
 
     if (success) {
-      // 触发内容变化回调
-      if (onContentChange && containerRef.current) {
-        onContentChange(containerRef.current.innerHTML);
+      console.log('✅ 文本更新成功，开始同步下载容器');
+      
+      // 使用改进的强制同步方法
+      await forceSyncDownloadContainer();
+      
+      // 触发内容变化回调，使用下载容器的内容
+      if (onContentChange && downloadContainerRef.current) {
+        const syncedContent = downloadContainerRef.current.innerHTML;
+        console.log('📤 触发内容变化回调，内容长度:', syncedContent.length);
+        onContentChange(syncedContent);
       }
       
-      console.log('Text updated successfully:', newText);
+      console.log('🎯 编辑保存流程完成');
     } else {
-      console.error('Failed to update text element');
+      console.error('❌ 文本元素更新失败');
     }
 
     setIsModalOpen(false);
@@ -190,21 +309,36 @@ const EditableCard: React.FC<EditableCardProps> = ({
     setEditingElement(null);
   };
 
-  // 重置到原始内容
-  const resetContent = () => {
+  // 重置到原始内容 - 改进版本
+  const resetContent = async () => {
     if (containerRef.current) {
+      console.log('🔄 开始重置内容');
+      
       cleanupEditableFeatures();
       const decodedContent = decodeUnicode(htmlContent);
       containerRef.current.innerHTML = decodedContent;
-      setTimeout(() => {
+      
+      // 立即同步到下载容器
+      if (downloadContainerRef.current) {
+        downloadContainerRef.current.innerHTML = decodedContent;
+        console.log('📄 重置时同步下载容器');
+      }
+      
+      // 重新设置编辑功能
+      setTimeout(async () => {
         setupEditableFeatures();
+        // 编辑功能设置完成后，强制同步下载容器
+        await forceSyncDownloadContainer();
+        console.log('✅ 重置完成并重新同步');
       }, 100);
     }
   };
 
-  // 初始化内容
+  // 初始化内容 - 改进版本
   useEffect(() => {
     if (!containerRef.current) return;
+    
+    console.log('🚀 开始初始化EditableCard内容');
     
     // 清理之前的状态
     cleanupEditableFeatures();
@@ -213,9 +347,18 @@ const EditableCard: React.FC<EditableCardProps> = ({
     const decodedContent = decodeUnicode(htmlContent);
     containerRef.current.innerHTML = decodedContent;
     
-    // 短暂延迟后设置编辑功能
-    const timer = setTimeout(() => {
+    // 立即同步到下载容器（使用清理后的内容）
+    if (downloadContainerRef.current) {
+      downloadContainerRef.current.innerHTML = decodedContent;
+      console.log('📄 初始化时同步下载容器, 内容长度:', decodedContent.length);
+    }
+    
+    // 短暂延迟后设置编辑功能并强制同步
+    const timer = setTimeout(async () => {
       setupEditableFeatures();
+      // 编辑功能设置完成后，使用强制同步确保稳定性
+      await forceSyncDownloadContainer();
+      console.log('✅ 初始化完成：编辑功能已启用，下载容器已同步');
     }, 200);
     
     return () => {
@@ -291,10 +434,11 @@ const EditableCard: React.FC<EditableCardProps> = ({
               top: '-9999px',
               width: `${dimensions.width}px`,
               height: `${dimensions.height}px`,
-              fontFamily: 'system-ui, -apple-system, sans-serif'
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+              visibility: 'hidden'
             }}
             data-download-container
-            dangerouslySetInnerHTML={{ __html: processedContent }}
+            ref={downloadContainerRef}
           />
         </div>
 

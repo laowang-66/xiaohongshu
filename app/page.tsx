@@ -5,8 +5,10 @@ import Navigation from './components/Navigation';
 import { TEMPLATE_COMPONENTS } from './components/InfoCardTemplates';
 import CoverTemplatePreview from './components/CoverTemplatePreview';
 import EditableCard from './components/EditableCard';
+import ContentOptimizer from './components/ContentOptimizer';
 import { analyzeContentAndRecommend, generateDesignSuggestion } from './utils/aiContentAnalyzer';
 import { ENHANCED_TEMPLATES } from './utils/enhancedTemplates';
+import { OptimizationResult } from './utils/contentOptimizer';
 
 const tabs = [
   { key: 'extract', label: '内容提炼' },
@@ -293,6 +295,11 @@ export default function Home() {
   const [cardCopied, setCardCopied] = useState(false);
   const [editedCardContent, setEditedCardContent] = useState('');
   
+  // 内容优化专用
+  const [optimizedContent, setOptimizedContent] = useState('');
+  const [showContentOptimizer, setShowContentOptimizer] = useState(false);
+  const [contentOptimizationResult, setContentOptimizationResult] = useState<OptimizationResult | null>(null);
+  
   // AI智能推荐
   const [aiRecommendation, setAiRecommendation] = useState<any>(null);
   const [showAiSuggestion, setShowAiSuggestion] = useState(false);
@@ -498,6 +505,31 @@ export default function Home() {
       setCardTemplate(recommendation.templateKey);
     }
   };
+
+  // 处理内容优化选择
+  const handleOptimizedContentSelect = (content: string) => {
+    setOptimizedContent(content);
+    setCardInput(content); // 更新输入框内容
+  };
+
+  // 处理内容优化结果
+  const handleOptimizationResult = (result: OptimizationResult | null) => {
+    setContentOptimizationResult(result);
+  };
+
+  // 处理文案输入变化
+  const handleCardInputChange = (newInput: string) => {
+    setCardInput(newInput);
+    
+    // 显示/隐藏内容优化器
+    const shouldShow = newInput.trim().length > 5;
+    setShowContentOptimizer(shouldShow);
+    
+    // 如果用户手动修改了输入，清除已选择的优化内容
+    if (newInput !== optimizedContent) {
+      setOptimizedContent('');
+    }
+  };
   
   // 监听文案输入变化，自动进行AI分析
   useEffect(() => {
@@ -519,7 +551,11 @@ export default function Home() {
     setCardResultInfo(null);
     setCardCopied(false);
     setEditedCardContent(''); // 重置编辑内容
-    if (!cardInput.trim()) {
+    
+    // 使用优化后的内容或原始输入
+    const contentToUse = optimizedContent || cardInput;
+    
+    if (!contentToUse.trim()) {
       setCardError('请输入封面文案内容');
       return;
     }
@@ -529,7 +565,7 @@ export default function Home() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          text: cardInput,
+          text: contentToUse,
           template: cardTemplate,
           coverSize: cardSize,
         }),
@@ -565,28 +601,64 @@ export default function Home() {
 
   // 封面下载图片
   const handleCardDownload = async () => {
-    if (!cardResultInfo?.dimensions) return;
+    if (!cardResultInfo?.dimensions) {
+      setCardError('没有可下载的内容');
+      return;
+    }
 
     try {
-      const { getCurrentCleanContent, downloadCoverImage, generateFileName } = await import('./utils/downloadHelper');
+      setCardError('🚀 正在准备下载...');
+      console.log('📋 开始下载流程');
       
-      // 获取当前的纯净内容，优先使用编辑后的内容
-      let contentToDownload = getCurrentCleanContent('[data-download-container]', editedCardContent || cardResult);
+      const { downloadCoverImage, generateFileName } = await import('./utils/downloadHelper');
       
-      // 如果没有找到下载容器，尝试从编辑容器获取
-      if (!contentToDownload || contentToDownload.trim().length === 0) {
-        contentToDownload = getCurrentCleanContent('[data-editable-card-container]', editedCardContent || cardResult);
-        console.log('从编辑容器获取内容');
+      let contentToDownload = '';
+      let downloadSource = '';
+      
+      // 优先策略：下载容器 -> 编辑内容 -> 原始内容
+      console.log('🔍 开始内容获取流程');
+      
+      // 1. 优先从下载容器获取内容（专门为下载准备的原尺寸版本）
+      try {
+        const downloadContainer = document.querySelector('[data-download-container]') as HTMLElement;
+        if (downloadContainer?.innerHTML?.trim()) {
+          contentToDownload = downloadContainer.innerHTML.trim();
+          downloadSource = '下载容器';
+          console.log('✅ 成功从下载容器获取内容，长度:', contentToDownload.length);
+          
+          // 验证下载容器内容质量
+          if (contentToDownload.includes('rgba(59, 130, 246') || 
+              contentToDownload.includes('editable-') ||
+              contentToDownload.includes('cursor: pointer')) {
+            console.warn('⚠️ 下载容器包含编辑样式，将使用其他源');
+            contentToDownload = '';
+          } else {
+            console.log('✅ 下载容器内容验证通过');
+          }
+        } else {
+          console.log('❌ 下载容器为空或不存在');
+        }
+      } catch (e) {
+        console.warn('❌ 获取下载容器失败:', e);
       }
       
-      // 如果还是获取不到内容，直接使用原始结果
-      if (!contentToDownload || contentToDownload.trim().length === 0) {
-        contentToDownload = editedCardContent || cardResult;
-        console.log('使用原始内容进行下载');
+      // 2. 如果下载容器为空或有问题，使用编辑后的内容
+      if (!contentToDownload && editedCardContent) {
+        contentToDownload = editedCardContent;
+        downloadSource = '编辑内容';
+        console.log('✅ 使用编辑后的内容，长度:', contentToDownload.length);
+      }
+      
+      // 3. 最后使用原始生成的内容
+      if (!contentToDownload && cardResult) {
+        contentToDownload = cardResult;
+        downloadSource = '原始内容';
+        console.log('✅ 使用原始生成内容，长度:', contentToDownload.length);
       }
 
-      if (!contentToDownload || contentToDownload.trim().length === 0) {
-        setCardError('没有可下载的内容，请重新生成');
+      // 内容验证
+      if (!contentToDownload?.trim()) {
+        setCardError('❌ 没有可下载的内容，请重新生成');
         return;
       }
 
@@ -594,8 +666,17 @@ export default function Home() {
       const sizeLabel = coverSizes.find(s => s.key === cardSize)?.label || '封面';
       const filename = generateFileName(sizeLabel, width, height);
 
-      console.log('开始下载:', filename, '尺寸:', width, 'x', height);
+      console.log('📊 下载参数:');
+      console.log('  📁 文件名:', filename);
+      console.log('  📏 尺寸:', width, 'x', height);
+      console.log('  📄 内容源:', downloadSource);
+      console.log('  📝 内容长度:', contentToDownload.length);
+      console.log('  🔍 内容预览:', contentToDownload.substring(0, 200) + '...');
 
+      setCardError('🎨 正在生成高质量图片...');
+
+      // 执行下载
+      console.log('🖼️ 开始图片生成和下载');
       const success = await downloadCoverImage(contentToDownload, {
         width,
         height,
@@ -605,15 +686,27 @@ export default function Home() {
       });
 
       if (!success) {
-        setCardError('封面下载失败，请稍后重试');
+        throw new Error('图片生成失败，请重试');
       } else {
-        // 下载成功后显示提示
+        // 下载成功
         setCardError('');
-        console.log('下载成功!');
+        console.log('🎉 下载成功完成!');
+        
+        // 显示成功提示并自动消失
+        setCardError('✅ 下载成功！');
+        setTimeout(() => {
+          setCardError('');
+        }, 3000);
       }
     } catch (error) {
-      console.error('下载失败:', error);
-      setCardError(`封面下载失败：${error instanceof Error ? error.message : '请稍后重试'}`);
+      console.error('💥 下载流程失败:', error);
+      const errorMessage = error instanceof Error ? error.message : '未知错误';
+      setCardError(`❌ 封面下载失败：${errorMessage}`);
+      
+      // 错误信息延迟清除
+      setTimeout(() => {
+        setCardError('');
+      }, 5000);
     }
   };
 
@@ -1117,7 +1210,7 @@ export default function Home() {
                   className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent h-32"
                   placeholder="请输入您想要制作封面的核心文案内容，如标题、关键信息等..."
                   value={cardInput}
-                  onChange={e => setCardInput(e.target.value)}
+                  onChange={e => handleCardInputChange(e.target.value)}
                   disabled={cardLoading}
                 />
                 <div className="text-xs text-gray-400 mt-1">
@@ -1138,7 +1231,7 @@ export default function Home() {
                       <button
                         key={index}
                         className="text-xs px-3 py-1 bg-white border border-gray-200 rounded-full hover:bg-primary hover:text-white hover:border-primary transition-colors"
-                        onClick={() => setCardInput(example)}
+                        onClick={() => handleCardInputChange(example)}
                         disabled={cardLoading}
                       >
                         {example.length > 25 ? example.substring(0, 25) + '...' : example}
@@ -1146,6 +1239,15 @@ export default function Home() {
                     ))}
                   </div>
                 </div>
+
+                {/* 内容智能优化组件 */}
+                <ContentOptimizer
+                  originalContent={cardInput}
+                  selectedPlatform={cardSize}
+                  onContentSelect={handleOptimizedContentSelect}
+                  onOptimizationResult={handleOptimizationResult}
+                  isVisible={showContentOptimizer}
+                />
               </div>
 
               {/* AI智能推荐区域 */}
@@ -1268,10 +1370,29 @@ export default function Home() {
                       AI设计中...
                     </span>
                   ) : (
-                    '🎨 生成专业封面'
+                    <span className="flex items-center justify-center gap-2">
+                      {optimizedContent ? (
+                        <>
+                          ✨ 生成专业封面
+                          <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded-full">使用优化内容</span>
+                        </>
+                      ) : (
+                        <>🎨 生成专业封面</>
+                      )}
+                    </span>
                   )}
                 </button>
               </div>
+
+              {/* 显示当前使用的内容 */}
+              {optimizedContent && (
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="text-sm text-blue-700">
+                    <span className="font-medium">✨ 当前使用优化内容：</span>
+                    <div className="mt-1 text-blue-600 font-medium">{optimizedContent}</div>
+                  </div>
+                </div>
+              )}
 
               {cardError && (
                 <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
