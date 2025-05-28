@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>封面下载一致性验证</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            background: #fafbfc;
+        }
+        .test-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .status {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.warning { background: #fff3cd; color: #856404; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .test-button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            background: #007bff;
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            margin: 8px;
+            transition: all 0.2s;
+        }
+        .test-button:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+        .result-area {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .instructions {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .step {
+            margin: 10px 0;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        .step:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 封面预览与下载一致性验证工具</h1>
+            <p>测试预览效果与下载图片是否完全一致</p>
+        </div>
+
+        <div class="instructions">
+            <h3>📋 测试步骤</h3>
+            <div class="step">
+                <strong>步骤 1:</strong> 打开主应用页面 (http://localhost:3000)
+            </div>
+            <div class="step">
+                <strong>步骤 2:</strong> 在"封面生成"选项卡中生成任意封面
+            </div>
+            <div class="step">
+                <strong>步骤 3:</strong> 回到此页面，点击下方的测试按钮验证一致性
+            </div>
+            <div class="step">
+                <strong>步骤 4:</strong> 查看测试结果，确认修复效果
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">
+                🔍 DOM元素检查
+                <span id="dom-status" class="status">等待测试</span>
+            </div>
+            <button class="test-button" onclick="validateDOMElements()">检查DOM元素</button>
+            <div id="dom-result" class="result-area" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">
+                🎨 样式清理检查
+                <span id="style-status" class="status">等待测试</span>
+            </div>
+            <button class="test-button" onclick="checkStyleCleaning()">检查样式清理</button>
+            <div id="style-result" class="result-area" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">
+                📏 尺寸一致性检查
+                <span id="size-status" class="status">等待测试</span>
+            </div>
+            <button class="test-button" onclick="validateSizes()">检查尺寸一致性</button>
+            <div id="size-result" class="result-area" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">
+                🚀 完整一致性测试
+                <span id="full-status" class="status">等待测试</span>
+            </div>
+            <button class="test-button" onclick="runFullTest()">运行完整测试</button>
+            <div id="full-result" class="result-area" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">
+                💾 模拟下载测试
+                <span id="download-status" class="status">等待测试</span>
+            </div>
+            <button class="test-button" onclick="simulateDownload()">模拟下载流程</button>
+            <div id="download-result" class="result-area" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        // 获取主窗口的引用
+        function getMainWindow() {
+            // 尝试通过localStorage或其他方式获取主窗口
+            const mainUrl = 'http://localhost:3000';
+            return window.open(mainUrl, 'main', 'noopener');
+        }
+
+        // 通用结果显示函数
+        function showResult(elementId, statusId, result, isSuccess) {
+            const resultEl = document.getElementById(elementId);
+            const statusEl = document.getElementById(statusId);
+            
+            resultEl.innerHTML = result;
+            resultEl.style.display = 'block';
+            
+            statusEl.textContent = isSuccess ? '✅ 通过' : '❌ 失败';
+            statusEl.className = `status ${isSuccess ? 'success' : 'error'}`;
+        }
+
+        // DOM元素验证
+        async function validateDOMElements() {
+            const result = [];
+            let success = true;
+
+            try {
+                // 直接在当前页面检查（如果是在iframe中）或通过postMessage
+                result.push('🔍 开始DOM元素检查...');
+                
+                // 检查是否有预览容器的引用
+                const hasPreviewRef = localStorage.getItem('previewContainerExists');
+                const hasDownloadRef = localStorage.getItem('downloadContainerExists');
+                
+                if (hasPreviewRef) {
+                    result.push('✅ 预览容器引用存在');
+                } else {
+                    result.push('❌ 预览容器引用不存在 - 请先在主页面生成封面');
+                    success = false;
+                }
+                
+                if (hasDownloadRef) {
+                    result.push('✅ 下载容器引用存在');
+                } else {
+                    result.push('❌ 下载容器引用不存在');
+                    success = false;
+                }
+                
+                result.push('');
+                result.push('💡 提示: 请在主页面(localhost:3000)的控制台运行以下代码来设置引用:');
+                result.push('localStorage.setItem("previewContainerExists", !!document.querySelector("[data-editable-card-container]"));');
+                result.push('localStorage.setItem("downloadContainerExists", !!document.querySelector("[data-download-container]"));');
+                
+            } catch (error) {
+                result.push(`❌ 检查失败: ${error.message}`);
+                success = false;
+            }
+
+            showResult('dom-result', 'dom-status', result.join('<br>'), success);
+        }
+
+        // 样式清理检查
+        async function checkStyleCleaning() {
+            const result = [];
+            let success = true;
+
+            try {
+                result.push('🎨 开始样式清理检查...');
+                
+                const downloadContent = localStorage.getItem('downloadContent') || '';
+                
+                if (!downloadContent) {
+                    result.push('❌ 无下载内容可检查');
+                    result.push('💡 请在主页面控制台运行: localStorage.setItem("downloadContent", document.querySelector("[data-download-container]")?.innerHTML || "");');
+                    success = false;
+                } else {
+                    const issues = [];
+                    
+                    if (downloadContent.includes('rgba(59, 130, 246')) {
+                        issues.push('蓝色编辑框样式残留');
+                    }
+                    
+                    if (downloadContent.includes('cursor: pointer')) {
+                        issues.push('pointer光标样式残留');
+                    }
+                    
+                    if (downloadContent.includes('transform: scale')) {
+                        issues.push('缩放变换残留');
+                    }
+                    
+                    if (downloadContent.includes('editable-')) {
+                        issues.push('编辑类名残留');
+                    }
+                    
+                    if (issues.length === 0) {
+                        result.push('✅ 样式清理检查通过 - 无编辑样式残留');
+                    } else {
+                        result.push('⚠️ 发现样式问题:');
+                        issues.forEach(issue => result.push(`  - ${issue}`));
+                        success = false;
+                    }
+                }
+                
+            } catch (error) {
+                result.push(`❌ 检查失败: ${error.message}`);
+                success = false;
+            }
+
+            showResult('style-result', 'style-status', result.join('<br>'), success);
+        }
+
+        // 尺寸一致性检查
+        async function validateSizes() {
+            const result = [];
+            let success = true;
+
+            try {
+                result.push('📏 开始尺寸一致性检查...');
+                
+                const downloadContent = localStorage.getItem('downloadContent') || '';
+                const sizeType = localStorage.getItem('currentSizeType') || 'xiaohongshu';
+                
+                const sizeConfig = {
+                    xiaohongshu: { width: 900, height: 1200 },
+                    video: { width: 1080, height: 1920 },
+                    wechat: { width: 900, height: 268 }
+                };
+                
+                const expectedSize = sizeConfig[sizeType];
+                
+                if (!downloadContent) {
+                    result.push('❌ 无内容可检查尺寸');
+                    success = false;
+                } else {
+                    const hasCorrectWidth = downloadContent.includes(`width:${expectedSize.width}px`) || 
+                                          downloadContent.includes(`width: ${expectedSize.width}px`);
+                    const hasCorrectHeight = downloadContent.includes(`height:${expectedSize.height}px`) || 
+                                           downloadContent.includes(`height: ${expectedSize.height}px`);
+                    
+                    result.push(`期望尺寸: ${expectedSize.width} x ${expectedSize.height}`);
+                    result.push(`宽度检查: ${hasCorrectWidth ? '✅ 正确' : '❌ 不正确'}`);
+                    result.push(`高度检查: ${hasCorrectHeight ? '✅ 正确' : '❌ 不正确'}`);
+                    
+                    if (hasCorrectWidth && hasCorrectHeight) {
+                        result.push('✅ 尺寸一致性检查通过');
+                    } else {
+                        success = false;
+                    }
+                }
+                
+            } catch (error) {
+                result.push(`❌ 检查失败: ${error.message}`);
+                success = false;
+            }
+
+            showResult('size-result', 'size-status', result.join('<br>'), success);
+        }
+
+        // 完整测试
+        async function runFullTest() {
+            const result = [];
+            let success = true;
+
+            result.push('🚀 开始完整一致性测试...');
+            result.push('');
+            
+            // 依次运行所有检查
+            await validateDOMElements();
+            await checkStyleCleaning();
+            await validateSizes();
+            
+            // 汇总结果
+            const domStatus = document.getElementById('dom-status').textContent;
+            const styleStatus = document.getElementById('style-status').textContent;
+            const sizeStatus = document.getElementById('size-status').textContent;
+            
+            result.push('📊 测试结果汇总:');
+            result.push(`DOM元素: ${domStatus}`);
+            result.push(`样式清理: ${styleStatus}`);
+            result.push(`尺寸检查: ${sizeStatus}`);
+            result.push('');
+            
+            const allPassed = domStatus.includes('✅') && styleStatus.includes('✅') && sizeStatus.includes('✅');
+            
+            if (allPassed) {
+                result.push('🎉 所有测试通过！预览与下载一致性修复成功！');
+            } else {
+                result.push('⚠️ 部分测试未通过，需要进一步检查');
+                success = false;
+            }
+
+            showResult('full-result', 'full-status', result.join('<br>'), success);
+        }
+
+        // 模拟下载测试
+        async function simulateDownload() {
+            const result = [];
+            let success = true;
+
+            try {
+                result.push('💾 开始模拟下载流程测试...');
+                
+                const downloadContent = localStorage.getItem('downloadContent') || '';
+                
+                if (!downloadContent) {
+                    result.push('❌ 无下载内容');
+                    success = false;
+                } else {
+                    result.push(`✅ 下载内容长度: ${downloadContent.length} 字符`);
+                    
+                    // 检查关键元素
+                    const hasBackground = downloadContent.includes('background') || downloadContent.includes('linear-gradient');
+                    const hasText = downloadContent.length > 500; // 简单的内容丰富度检查
+                    const hasStructure = downloadContent.includes('<div') && downloadContent.includes('</div>');
+                    
+                    result.push(`背景样式: ${hasBackground ? '✅ 存在' : '❌ 缺失'}`);
+                    result.push(`文本内容: ${hasText ? '✅ 丰富' : '❌ 不足'}`);
+                    result.push(`HTML结构: ${hasStructure ? '✅ 完整' : '❌ 不完整'}`);
+                    
+                    if (hasBackground && hasText && hasStructure) {
+                        result.push('✅ 模拟下载测试通过 - 内容质量良好');
+                    } else {
+                        result.push('❌ 模拟下载测试失败 - 内容质量有问题');
+                        success = false;
+                    }
+                }
+                
+            } catch (error) {
+                result.push(`❌ 测试失败: ${error.message}`);
+                success = false;
+            }
+
+            showResult('download-result', 'download-status', result.join('<br>'), success);
+        }
+
+        // 页面加载时的提示
+        window.addEventListener('load', function() {
+            console.log('🎯 预览与下载一致性验证工具已加载！');
+            console.log('📝 使用方法:');
+            console.log('1. 在主页面(localhost:3000)生成封面');
+            console.log('2. 回到此页面运行各项测试');
+            console.log('3. 查看测试结果验证修复效果');
+        });
+    </script>
+</body>
+</html> 

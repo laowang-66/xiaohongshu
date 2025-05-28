@@ -1,8 +1,18 @@
 /**
  * 增强的模板系统 - 提供更精美和现代化的设计模板
+ * 专注于三个核心：内容提炼优化、内容规范适配、模板美化套用
+ * 新增：Markdown结构分析，提供更精准的内容理解和设计建议
  */
 
 import { analyzeContentAndRecommend } from './aiContentAnalyzer';
+import { analyzeContentInDepth, generateSmartOptimizationPrompt } from './contentOptimizer';
+import { 
+  convertToMarkdown, 
+  parseMarkdownStructure, 
+  optimizeCoverContent,
+  type MarkdownStructure,
+  type OptimizedCoverContent 
+} from './markdownContentAnalyzer';
 
 export interface EnhancedTemplate {
   key: string;
@@ -13,283 +23,553 @@ export interface EnhancedTemplate {
   getPrompt: (sizeConfig: any, text: string) => string;
   colorPalette: string[];
   features: string[];
+  contentRules: {
+    titleMaxLength: number;
+    subtitleMaxLength: number;
+    optimalWordCount: number;
+    layoutType: 'card' | 'full' | 'split' | 'overlay';
+    designPrinciples: string[];
+  };
 }
 
-// 新增精美模板
+// 新增精美模板系统
 export const ENHANCED_TEMPLATES: EnhancedTemplate[] = [
   {
-    key: 'modern_gradient_card',
-    name: '现代渐变卡片',
-    description: '使用时尚渐变和磨砂玻璃效果，适合时尚、科技类内容',
-    category: '现代时尚',
-    preview: '🌈✨',
-    colorPalette: ['#667eea', '#764ba2', '#f093fb', '#f5576c'],
-    features: ['渐变背景', '磨砂玻璃效果', '动态阴影', '现代字体'],
-    getPrompt: (sizeConfig, text) => generateModernGradientPrompt(sizeConfig, text)
+    key: 'premium_glass_morphism',
+    name: '高端玻璃质感',
+    description: '磨砂玻璃效果配合高级渐变，适合高端品牌和奢华内容',
+    category: '高端奢华',
+    preview: '💎✨',
+    colorPalette: ['#667eea', '#764ba2', 'rgba(255,255,255,0.1)', '#1a1a2e'],
+    features: ['玻璃质感', '高级渐变', '精致阴影', '优雅字体', '层次丰富'],
+    contentRules: {
+      titleMaxLength: 18,
+      subtitleMaxLength: 12,
+      optimalWordCount: 25,
+      layoutType: 'card',
+      designPrinciples: ['极简主义', '高端质感', '精致细节', '品牌调性']
+    },
+    getPrompt: (sizeConfig, text) => generatePremiumGlassMorphismPrompt(sizeConfig, text)
   },
   {
-    key: 'neon_cyber_style',
-    name: '霓虹赛博风格',
-    description: '未来感霓虹色彩设计，适合科技、游戏、潮流内容',
+    key: 'vibrant_3d_card',
+    name: '活力3D卡片',
+    description: '3D立体效果配合鲜活色彩，适合年轻时尚和潮流内容',
+    category: '年轻潮流',
+    preview: '🎨🎪',
+    colorPalette: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#feca57'],
+    features: ['3D立体', '活力色彩', '动感元素', '年轻字体', '潮流设计'],
+    contentRules: {
+      titleMaxLength: 20,
+      subtitleMaxLength: 15,
+      optimalWordCount: 30,
+      layoutType: 'card',
+      designPrinciples: ['活力四射', '年轻态度', '潮流元素', '情感共鸣']
+    },
+    getPrompt: (sizeConfig, text) => generateVibrant3DCardPrompt(sizeConfig, text)
+  },
+  {
+    key: 'elegant_serif_magazine',
+    name: '优雅杂志风',
+    description: '经典杂志排版风格，适合深度内容和专业文章',
+    category: '专业经典',
+    preview: '📖✒️',
+    colorPalette: ['#2c3e50', '#34495e', '#ecf0f1', '#e74c3c'],
+    features: ['杂志排版', '经典字体', '专业布局', '阅读友好', '权威感'],
+    contentRules: {
+      titleMaxLength: 25,
+      subtitleMaxLength: 20,
+      optimalWordCount: 40,
+      layoutType: 'split',
+      designPrinciples: ['专业权威', '阅读体验', '信息层次', '经典美感']
+    },
+    getPrompt: (sizeConfig, text) => generateElegantSerifMagazinePrompt(sizeConfig, text)
+  },
+  {
+    key: 'nature_organic_flow',
+    name: '自然有机流动',
+    description: '自然流动的曲线和有机形状，适合生活方式和健康内容',
+    category: '自然生活',
+    preview: '🌿🌊',
+    colorPalette: ['#27ae60', '#2ecc71', '#a8e6cf', '#f8fff8'],
+    features: ['有机曲线', '自然质感', '流动元素', '舒适色彩', '生态友好'],
+    contentRules: {
+      titleMaxLength: 22,
+      subtitleMaxLength: 16,
+      optimalWordCount: 35,
+      layoutType: 'overlay',
+      designPrinciples: ['自然和谐', '有机美学', '生活态度', '健康理念']
+    },
+    getPrompt: (sizeConfig, text) => generateNatureOrganicFlowPrompt(sizeConfig, text)
+  },
+  {
+    key: 'tech_cyber_neon',
+    name: '科技赛博霓虹',
+    description: '未来科技感配合霓虹发光效果，适合科技和创新内容',
     category: '未来科技',
     preview: '🔮⚡',
-    colorPalette: ['#00d2ff', '#3a47d5', '#ff0080', '#00ff88'],
-    features: ['霓虹发光效果', '几何图形', '对比色彩', '未来字体'],
-    getPrompt: (sizeConfig, text) => generateNeonCyberPrompt(sizeConfig, text)
+    colorPalette: ['#0f3460', '#16213e', '#00d2ff', '#ff0080'],
+    features: ['霓虹发光', '科技线条', '未来感', '酷炫效果', '创新设计'],
+    contentRules: {
+      titleMaxLength: 16,
+      subtitleMaxLength: 12,
+      optimalWordCount: 25,
+      layoutType: 'full',
+      designPrinciples: ['未来科技', '创新思维', '酷炫视觉', '前沿感']
+    },
+    getPrompt: (sizeConfig, text) => generateTechCyberNeonPrompt(sizeConfig, text)
   },
   {
-    key: 'elegant_minimal',
-    name: '优雅极简风',
-    description: '简约而不简单，精致的排版和留白，适合高端品牌和文艺内容',
-    category: '极简优雅',
-    preview: '🤍📐',
-    colorPalette: ['#f8f9fa', '#e9ecef', '#6c757d', '#495057'],
-    features: ['极简布局', '精致排版', '优雅留白', '经典配色'],
-    getPrompt: (sizeConfig, text) => generateElegantMinimalPrompt(sizeConfig, text)
-  },
-  {
-    key: 'organic_nature',
-    name: '有机自然风',
-    description: '自然曲线和有机形状，温暖舒适的色彩，适合生活、健康、环保类内容',
-    category: '自然生活',
-    preview: '🌿🍃',
-    colorPalette: ['#81c784', '#a5d6a7', '#c8e6c9', '#e8f5e8'],
-    features: ['有机曲线', '自然色彩', '温暖质感', '生态元素'],
-    getPrompt: (sizeConfig, text) => generateOrganicNaturePrompt(sizeConfig, text)
-  },
-  {
-    key: 'retro_vintage',
-    name: '复古怀旧风',
-    description: '经典复古色调和怀旧元素，适合品牌故事、文化、艺术类内容',
-    category: '复古经典',
-    preview: '📻🎞️',
-    colorPalette: ['#d4a574', '#c19a6b', '#a67c5a', '#8b6f47'],
-    features: ['复古色调', '怀旧元素', '经典字体', '质感纹理'],
-    getPrompt: (sizeConfig, text) => generateRetroVintagePrompt(sizeConfig, text)
-  },
-  {
-    key: 'playful_dynamic',
-    name: '活力动感风',
-    description: '充满活力的色彩和动感元素，适合年轻化、娱乐、运动类内容',
-    category: '活力青春',
-    preview: '🎨🎪',
-    colorPalette: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24'],
-    features: ['活力色彩', '动感元素', '青春活泼', '趣味图形'],
-    getPrompt: (sizeConfig, text) => generatePlayfulDynamicPrompt(sizeConfig, text)
+    key: 'warm_story_telling',
+    name: '温暖故事叙述',
+    description: '温暖的色彩和故事化的布局，适合个人分享和情感内容',
+    category: '温暖情感',
+    preview: '🌅📚',
+    colorPalette: ['#f39c12', '#e67e22', '#f4d03f', '#fef9e7'],
+    features: ['温暖色调', '故事布局', '情感表达', '亲和字体', '人文关怀'],
+    contentRules: {
+      titleMaxLength: 24,
+      subtitleMaxLength: 18,
+      optimalWordCount: 38,
+      layoutType: 'split',
+      designPrinciples: ['情感共鸣', '人文关怀', '故事性', '温暖治愈']
+    },
+    getPrompt: (sizeConfig, text) => generateWarmStoryTellingPrompt(sizeConfig, text)
   }
 ];
 
-// 现代渐变卡片模板提示词
-function generateModernGradientPrompt(sizeConfig: any, text: string): string {
-  // 使用AI分析来优化设计
-  const analysis = analyzeContentAndRecommend(text, sizeConfig.key);
+// 高端玻璃质感模板提示词 - 增强版
+function generatePremiumGlassMorphismPrompt(sizeConfig: any, text: string): string {
+  // 先转换为Markdown并分析结构
+  const markdown = convertToMarkdown(text);
+  const structure = parseMarkdownStructure(markdown);
+  const optimized = optimizeCoverContent(structure);
+  
+  const contentAnalysis = analyzeContentInDepth(text);
+  const smartPrompt = generateSmartOptimizationPrompt(text, sizeConfig.key);
   
   return `
-请创建一个现代渐变卡片风格的封面，尺寸：${sizeConfig.width}×${sizeConfig.height}px
+请创建一个高端玻璃质感风格的封面设计，尺寸：${sizeConfig.width}×${sizeConfig.height}px
 
-🎨 设计理念：现代时尚 + 视觉冲击
-- 使用先进的CSS渐变技术和现代设计语言
-- 融入磨砂玻璃(Glassmorphism)效果
-- 创造层次丰富的视觉体验
+🎨 设计理念：奢华精致 + 现代科技
+基于Markdown结构分析：
+- 主标题：${optimized.title}
+- 副标题：${optimized.subtitle || ''}
+- 重点突出：${optimized.highlights.join(', ')}
+- 内容类型：${structure.contentType}
+- 布局建议：${optimized.layoutSuggestion}
 
-📐 布局规范：
-- 主容器：使用多层渐变背景，从深色到浅色的平滑过渡
-- 内容卡片：半透明白色背景，backdrop-filter模糊效果
-- 文字排版：现代无衬线字体，清晰的层次结构
-- 装饰元素：几何图形、渐变线条、动态阴影
+传统内容分析：
+- 核心价值：${contentAnalysis.coreValue}
+- 关键词组合：${contentAnalysis.keywordPairs.join(', ')}
+- 情感触发：${contentAnalysis.emotionalHooks.join(', ')}
 
-🌈 色彩系统：
-- 主渐变：从 #667eea 到 #764ba2
-- 次渐变：从 #f093fb 到 #f5576c  
-- 文字色：#ffffff (主标题) #f8f9fa (副标题) #e9ecef (正文)
-- 装饰色：rgba(255,255,255,0.2) 半透明白色
+💎 玻璃质感要求：
+- 背景：深色渐变（#667eea 到 #764ba2）配合光效
+- 主卡片：backdrop-filter: blur(20px) + rgba(255,255,255,0.1)
+- 边框：1px solid rgba(255,255,255,0.2)
+- 阴影：多层次阴影效果增强立体感
+- 装饰：抽象几何光影元素
 
-✨ 特效要求：
-- 背景：双层渐变 + 动态球形装饰
-- 卡片：backdrop-filter: blur(10px) + box-shadow
-- 文字：适当的text-shadow增强可读性
-- 装饰：CSS transform创造空间感
+📐 结构化布局标准（基于Markdown分析）：
+${structure.headings.length > 1 ? `
+- 层次化标题：主标题 ${optimized.title}（48-58px）
+- 副标题层级：${structure.headings.map(h => `${'#'.repeat(h.level)} ${h.text}`).join(', ')}
+` : `
+- 主标题：居中展示，${optimized.title}，字号48-58px，font-weight: 700
+- 副标题：字号24-28px，opacity: 0.9
+`}
+- 内容卡片：80%宽度居中，圆角16px
+- 边距：上下60px，左右40px
 
-📝 文字处理：
-- 主标题：48-60px，font-weight: 700，突出核心信息
-- 副标题：24-28px，font-weight: 500，补充说明
-- 正文：18-20px，font-weight: 400，详细描述
-- 特殊强调：使用渐变文字效果
+${structure.lists.allItems.length > 0 ? `
+🎯 要点展示（基于列表结构）：
+${structure.lists.allItems.map((item, index) => `- 要点${index + 1}：${item}`).join('\n')}
+` : ''}
 
-内容文案：${text}
+${structure.emphasis.highlights.length > 0 ? `
+⭐ 重点强调元素：
+${structure.emphasis.highlights.map(highlight => `- **${highlight}**`).join('\n')}
+` : ''}
 
-请生成完整的HTML代码，包含所有内联CSS样式，确保视觉效果现代时尚且具有强烈的吸引力。
+🌟 视觉细节：
+- 文字颜色：主标题 #ffffff，副标题 #f8f9fa
+- 强调元素：使用渐变文字效果突出重点内容
+- 微交互：轻微的transform和过渡效果暗示
+- 质感纹理：细微的噪点或纹理增强质感
+- 视觉元素：${optimized.visualElements.join(', ')}
+
+原始内容：${text}
+结构化Markdown：
+${markdown}
+
+请生成完整的HTML代码，体现高端奢华的品牌调性和精致的设计品质，同时充分利用内容的结构化信息。
   `.trim();
 }
 
-// 霓虹赛博风格模板提示词  
-function generateNeonCyberPrompt(sizeConfig: any, text: string): string {
+// 活力3D卡片模板提示词 - 增强版
+function generateVibrant3DCardPrompt(sizeConfig: any, text: string): string {
+  const markdown = convertToMarkdown(text);
+  const structure = parseMarkdownStructure(markdown);
+  const optimized = optimizeCoverContent(structure);
+  const contentAnalysis = analyzeContentInDepth(text);
+  
   return `
-请创建一个霓虹赛博风格的封面，尺寸：${sizeConfig.width}×${sizeConfig.height}px
+请创建一个活力3D卡片风格的封面设计，尺寸：${sizeConfig.width}×${sizeConfig.height}px
+
+🎪 设计理念：青春活力 + 立体动感
+基于Markdown结构分析：
+- 优化标题：${optimized.title}
+- 内容类型：${structure.contentType}
+- 布局类型：${structure.designHints.layoutType}
+- 重点要素：${optimized.highlights.join(', ')}
+
+传统分析补充：
+- 核心价值：${contentAnalysis.coreValue}
+- 目标卖点：${contentAnalysis.targetPoints.join(', ')}
+
+🎨 3D视觉效果：
+- 背景：鲜活渐变 + 3D几何形状装饰
+- 主卡片：transform: perspective(1000px) rotateX(5deg) rotateY(5deg)
+- 立体阴影：box-shadow: 0 20px 40px rgba(0,0,0,0.1), 0 15px 25px rgba(0,0,0,0.08)
+- 悬浮效果：多层卡片叠加创造景深
+- 动感元素：波浪线、几何图形、色彩斑点
+
+${structure.designHints.layoutType === 'timeline' ? `
+📅 时间线布局（检测到教程步骤）：
+${structure.lists.ordered.map((item, index) => `步骤${index + 1}：${item}`).join('\n')}
+` : structure.designHints.layoutType === 'grid' ? `
+🔲 网格布局（检测到多要点内容）：
+${structure.lists.allItems.slice(0, 6).map((item, index) => `项目${index + 1}：${item}`).join('\n')}
+` : ''}
+
+🌈 色彩搭配：
+- 主色调：#ff6b6b (活力红) #4ecdc4 (青春蓝)
+- 辅助色：#45b7d1 (天空蓝) #feca57 (阳光黄)
+- 文字色：#2c3e50 (深灰) #ffffff (强调)
+
+📝 智能排版设计：
+- 主标题：${optimized.title}，45-55px，加粗，可使用彩色渐变
+- 副标题：${optimized.subtitle || '智能提取副标题'}，22-26px，活泼字体
+- 装饰元素：emoji表情、几何图案、动感线条
+- 布局：${optimized.layoutSuggestion}
+
+${structure.emphasis.bold.length > 0 ? `
+💪 粗体强调内容：
+${structure.emphasis.bold.map(bold => `**${bold}**`).join(', ')}
+` : ''}
+
+原始内容：${text}
+结构化内容：
+${markdown}
+
+请生成充满青春活力和立体感的HTML设计代码，充分体现内容的结构层次。
+  `.trim();
+}
+
+// 优雅杂志风模板提示词 - 增强版
+function generateElegantSerifMagazinePrompt(sizeConfig: any, text: string): string {
+  const markdown = convertToMarkdown(text);
+  const structure = parseMarkdownStructure(markdown);
+  const optimized = optimizeCoverContent(structure);
+  const contentAnalysis = analyzeContentInDepth(text);
+  
+  return `
+请创建一个优雅杂志风格的封面设计，尺寸：${sizeConfig.width}×${sizeConfig.height}px
+
+📖 设计理念：经典权威 + 专业品质
+基于Markdown深度分析：
+- 主标题：${optimized.title}
+- 副标题：${optimized.subtitle || ''}
+- 文章结构：${structure.headings.length}个层级标题
+- 内容性质：${structure.contentType === 'technical' ? '技术专业' : structure.contentType === 'review' ? '评测分析' : '深度内容'}
+
+传统内容分析：
+- 核心价值：${contentAnalysis.coreValue}
+- 内容结构：${JSON.stringify(contentAnalysis.contentStructure)}
+
+✒️ 杂志排版标准：
+- 字体选择：serif字体体现权威感，sans-serif辅助
+- 主标题：${optimized.title}，Georgia或Times，50-60px，font-weight: 700
+- 副标题：${optimized.subtitle || '智能生成'}，Helvetica或Arial，28-32px，font-weight: 400
+- 正文：18-20px，行高1.6，阅读友好
+
+📐 经典杂志布局：
+${structure.headings.length > 2 ? `
+- 层次化标题系统：
+${structure.headings.map(h => `  ${h.level}级: ${h.text}`).join('\n')}
+` : `
+- 分栏设计：2/3主内容区 + 1/3装饰区
+`}
+- 网格系统：严格的对齐和比例关系
+- 留白艺术：充足的空间感
+- 层次感：通过字号、颜色、间距创造
+
+${structure.quotes.length > 0 ? `
+💬 引用内容突出：
+${structure.quotes.map(quote => `"${quote}"`).join('\n')}
+` : ''}
+
+🎨 专业配色：
+- 主色：#2c3e50 (专业深蓝)
+- 辅色：#34495e (中性灰蓝)
+- 背景：#ecf0f1 (优雅浅灰)
+- 强调：#e74c3c (经典红)
+
+📑 杂志元素：
+- 装饰线条：细线分隔和装饰
+- 标题装饰：下划线或侧边装饰条
+- 页面编号：角落的细节元素
+- 专业标识：品质印章或认证标记
+- 内容分类：${structure.contentType}专栏标识
+
+原始内容：${text}
+Markdown结构：
+${markdown}
+
+请生成体现专业权威和经典美感的杂志风格HTML代码，充分利用内容的层次结构。
+  `.trim();
+}
+
+// 科技赛博霓虹模板提示词 - 增强版
+function generateTechCyberNeonPrompt(sizeConfig: any, text: string): string {
+  const markdown = convertToMarkdown(text);
+  const structure = parseMarkdownStructure(markdown);
+  const optimized = optimizeCoverContent(structure);
+  const contentAnalysis = analyzeContentInDepth(text);
+  
+  return `
+请创建一个科技赛博霓虹风格的封面设计，尺寸：${sizeConfig.width}×${sizeConfig.height}px
 
 🔮 设计理念：未来科技 + 霓虹美学
-- 暗黑背景配合霓虹发光效果
-- 几何线条和科技元素
-- 强烈的对比色彩
+基于Markdown技术分析：
+- 标题：${optimized.title}
+- 技术特征：${structure.codeBlocks.length > 0 ? '包含代码块' : '技术概念'}
+- 重点内容：${optimized.highlights.join(', ')}
+- 结构类型：${structure.designHints.layoutType}
 
-🎨 色彩系统：
-- 背景：深黑色 #000000 到 #1a1a2e 渐变
-- 霓虹色：#00d2ff (蓝色光) #ff0080 (粉色光) #00ff88 (绿色光)
-- 文字：#ffffff (主) #00d2ff (强调) #cccccc (辅助)
+${structure.codeBlocks.length > 0 ? `
+💻 代码块检测：
+${structure.codeBlocks.map((block, index) => `代码片段${index + 1}${block.language ? ` (${block.language})` : ''}`).join('\n')}
+` : ''}
 
-✨ 视觉效果：
-- 霓虹发光：box-shadow 多层叠加创造发光效果
-- 扫描线：伪元素创造赛博感
-- 几何装饰：三角形、六边形、线条
-- 故障效果：轻微的位移和色彩分离
+传统分析：
+- 核心价值：${contentAnalysis.coreValue}
+- 情感触发：${contentAnalysis.emotionalHooks.join(', ')}
 
-📐 布局特点：
-- 非对称布局增加动感
-- 大胆的字体选择
-- 装饰线条引导视线
-- 适当的留白平衡视觉
+⚡ 霓虹发光系统：
+- 背景：深色科技感 (#0f3460 到 #16213e)
+- 霓虹色：#00d2ff (电蓝) #ff0080 (霓虹粉) #00ff88 (数码绿)
+- 发光效果：text-shadow和box-shadow多层叠加
+- 扫描线：动态扫描线效果增强科技感
+- 故障风格：轻微的color offset和distortion
 
-内容文案：${text}
+🤖 科技元素：
+- 几何线条：精确的数字化线条和网格
+- 数据流：抽象的数据传输视觉
+- 电路图案：简化的电路板装饰
+- 全息效果：透明叠加层模拟全息投影
+- 代码美学：等宽字体和代码风格元素
 
-请生成完整的HTML代码，营造强烈的未来科技感。
+${structure.emphasis.code.length > 0 ? `
+🔤 代码风格文字：
+${structure.emphasis.code.map(code => `\`${code}\``).join(', ')}
+` : ''}
+
+🌌 未来布局（基于${structure.designHints.layoutType}）：
+- 非对称设计：打破传统布局规则
+- 浮动元素：悬浮的信息模块
+- 透明层叠：多层信息的立体展示
+- 动感暗示：暗示动态和交互的设计
+
+🎯 赛博文字：
+- 主标题：${optimized.title}，等宽或未来感字体，40-50px
+- 发光文字：强烈的霓虹发光效果
+- 数字强调：突出数字和关键数据
+- 代码风格：部分文字采用代码美学
+
+原始内容：${text}
+技术结构：
+${markdown}
+
+请生成充满未来科技感和霓虹美学的HTML设计代码，突出技术内容的专业性。
   `.trim();
 }
 
-// 优雅极简风格模板提示词
-function generateElegantMinimalPrompt(sizeConfig: any, text: string): string {
+// 自然有机流动模板提示词
+function generateNatureOrganicFlowPrompt(sizeConfig: any, text: string): string {
+  const contentAnalysis = analyzeContentInDepth(text);
+  
   return `
-请创建一个优雅极简风格的封面，尺寸：${sizeConfig.width}×${sizeConfig.height}px
+请创建一个自然有机流动风格的封面设计，尺寸：${sizeConfig.width}×${sizeConfig.height}px
 
-🤍 设计理念：Less is More + 精致品质
-- 大量留白创造呼吸感
-- 精准的排版和对齐
-- 克制的色彩使用
-- 高品质的视觉表达
+🌿 设计理念：自然和谐 + 有机美学
+基于内容分析：
+- 核心价值：${contentAnalysis.coreValue}
+- 关键词组合：${contentAnalysis.keywordPairs.join(', ')}
 
-🎨 色彩系统：
-- 主背景：#f8f9fa 到 #ffffff 微妙渐变
-- 文字色：#212529 (标题) #6c757d (正文) #adb5bd (辅助)
-- 装饰色：#e9ecef (分割线) #dee2e6 (背景元素)
+🌊 有机流动元素：
+- 背景：自然渐变 + 有机曲线装饰
+- 形状：圆润曲线替代尖锐直角
+- 流动效果：波浪线、水波纹、云朵形状
+- 自然纹理：叶子、水滴、阳光光斑
+- 层次叠加：多层透明度创造深度
 
-📐 布局原则：
-- 黄金比例分割
-- 左对齐或居中对齐
-- 统一的行高和间距
-- 简洁的几何装饰
+🍃 自然色彩：
+- 主绿色：#27ae60 #2ecc71 (生命力)
+- 辅助色：#a8e6cf (清新薄荷) #f8fff8 (纯净白)
+- 装饰色：#f39c12 (阳光金) #3498db (天空蓝)
 
-✨ 细节处理：
-- 微妙的阴影增加层次
-- 细线条装饰元素
-- 优雅的字体选择
-- 精确的对齐和间距
+📐 有机布局：
+- 非标准网格：跟随自然流动的布局
+- 文字环绕：内容围绕有机形状排列
+- 呼吸感：充分的留白模拟自然空间
+- 视觉引导：曲线引导用户视线流动
+
+🌸 自然装饰：
+- 植物元素：抽象化的叶子、花朵、枝条
+- 光影效果：自然光线的模拟
+- 质感细节：自然材质的暗示
+- 生态符号：环保和可持续的视觉元素
 
 内容文案：${text}
 
-请生成完整的HTML代码，体现极简而优雅的设计美学。
+请生成体现自然和谐与有机美学的HTML设计代码。
   `.trim();
 }
 
-// 有机自然风格模板提示词
-function generateOrganicNaturePrompt(sizeConfig: any, text: string): string {
+// 温暖故事叙述模板提示词
+function generateWarmStoryTellingPrompt(sizeConfig: any, text: string): string {
+  const contentAnalysis = analyzeContentInDepth(text);
+  
   return `
-请创建一个有机自然风格的封面，尺寸：${sizeConfig.width}×${sizeConfig.height}px
+请创建一个温暖故事叙述风格的封面设计，尺寸：${sizeConfig.width}×${sizeConfig.height}px
 
-🌿 设计理念：回归自然 + 温暖舒适
-- 有机曲线替代直角
-- 自然色彩和质感
-- 温暖亲和的视觉感受
-- 生态环保的设计语言
+🌅 设计理念：温暖治愈 + 故事情怀
+基于内容分析：
+- 核心价值：${contentAnalysis.coreValue}
+- 内容结构：${JSON.stringify(contentAnalysis.contentStructure)}
 
-🎨 色彩系统：
-- 背景：#e8f5e8 到 #c8e6c9 柔和渐变
-- 主色：#81c784 (自然绿) #a5d6a7 (嫩绿)
-- 文字：#2e7d32 (深绿) #388e3c (中绿) #66bb6a (浅绿)
+📚 故事化布局：
+- 分层叙述：上中下三段式故事结构
+- 情感节奏：通过视觉元素控制阅读节奏
+- 温暖包围：内容被温暖元素环绕
+- 人文关怀：体现人与人之间的连接
 
-🍃 设计元素：
-- 有机形状背景
-- 叶子、水滴等自然图标
-- 圆角和曲线设计
-- 纸张质感效果
+🌻 温暖色彩系统：
+- 主暖色：#f39c12 (温暖橙) #e67e22 (舒适棕)
+- 辅助色：#f4d03f (柔和黄) #fef9e7 (温润白)
+- 情感色：#e74c3c (温暖红) #3498db (信任蓝)
 
-📐 布局特色：
-- 流畅的曲线布局
-- 自然的不规则形状
-- 温暖的间距设计
-- 亲和的视觉层次
+💕 情感设计元素：
+- 圆润形状：温和的圆角和曲线
+- 手绘感：略带手工质感的元素
+- 生活细节：日常生活的温暖符号
+- 情感符号：心形、拥抱、微笑等暖意元素
 
-内容文案：${text}
+📖 叙述性排版：
+- 标题：像书籍标题般的温雅字体
+- 正文：易读的人文字体，行距宽松
+- 装饰：装饰性的分隔线和ornament
+- 层次：温和的对比度不刺眼
 
-请生成完整的HTML代码，传达自然温暖的生活美学。
-  `.trim();
-}
-
-// 复古怀旧风格模板提示词
-function generateRetroVintagePrompt(sizeConfig: any, text: string): string {
-  return `
-请创建一个复古怀旧风格的封面，尺寸：${sizeConfig.width}×${sizeConfig.height}px
-
-📻 设计理念：经典回溯 + 怀旧情怀
-- 经典的设计元素和排版
-- 怀旧的色彩搭配
-- 复古的装饰图案
-- 时光沉淀的质感
-
-🎨 色彩系统：
-- 背景：#f5f1eb 温暖米白色
-- 主色：#d4a574 (复古金) #c19a6b (古铜色) #a67c5a (棕褐色)
-- 文字：#8b6f47 (深棕) #5d4e37 (咖啡色)
-
-📐 设计元素：
-- 经典边框和装饰线
-- 复古图案和纹理
-- 老式字体排版
-- 做旧质感效果
-
-✨ 视觉特色：
-- 纸质纹理背景
-- 印章和标签元素
-- 经典排版网格
-- 怀旧色彩处理
+🏠 温馨装饰：
+- 生活元素：咖啡杯、书本、植物等
+- 光影效果：温暖的自然光线
+- 质感细节：纸张、布料等温暖材质
+- 人文符号：体现关爱和温暖的图案
 
 内容文案：${text}
 
-请生成完整的HTML代码，营造经典怀旧的时光感。
+请生成充满温暖治愈感和故事情怀的HTML设计代码。
   `.trim();
 }
 
-// 活力动感风格模板提示词
-function generatePlayfulDynamicPrompt(sizeConfig: any, text: string): string {
-  return `
-请创建一个活力动感风格的封面，尺寸：${sizeConfig.width}×${sizeConfig.height}px
-
-🎪 设计理念：青春活力 + 动感节拍
-- 鲜艳活泼的色彩组合
-- 动感的图形元素
-- 年轻化的设计语言
-- 充满活力的视觉节奏
-
-🎨 色彩系统：
-- 背景：多色彩渐变或几何拼接
-- 主色：#ff6b6b (活力红) #4ecdc4 (清新蓝) #45b7d1 (天空蓝) #f9ca24 (阳光黄)
-- 文字：#2c3e50 (深蓝) #ffffff (白色)
-
-🎨 设计元素：
-- 几何图形组合
-- 动感线条和箭头
-- 活泼的图标元素
-- 不规则形状拼接
-
-📐 布局特色：
-- 动态不对称布局
-- 活泼的角度和旋转
-- 层次丰富的元素
-- 强烈的视觉冲击
-
-内容文案：${text}
-
-请生成完整的HTML代码，展现青春活力的动感美学。
-  `.trim();
+// 智能模板推荐系统 - 增强版
+export function recommendTemplateByContent(text: string, platform: string): EnhancedTemplate {
+  // 先进行Markdown分析
+  const markdown = convertToMarkdown(text);
+  const structure = parseMarkdownStructure(markdown);
+  const optimized = optimizeCoverContent(structure);
+  
+  // 传统分析作为补充
+  const contentAnalysis = analyzeContentInDepth(text);
+  const aiAnalysis = analyzeContentAndRecommend(text, platform);
+  
+  console.log('🧠 Markdown结构分析:', {
+    contentType: structure.contentType,
+    layoutType: structure.designHints.layoutType,
+    templateRecommendation: optimized.templateRecommendation,
+    hasStructure: structure.designHints.hasStructure,
+    codeBlocks: structure.codeBlocks.length,
+    lists: structure.lists.allItems.length
+  });
+  
+  // 优先使用Markdown分析的模板推荐
+  if (optimized.templateRecommendation && optimized.templateRecommendation !== 'premium_glass_morphism') {
+    const recommended = ENHANCED_TEMPLATES.find(t => t.key === optimized.templateRecommendation);
+    if (recommended) {
+      console.log('✅ 使用Markdown推荐模板:', recommended.name);
+      return recommended;
+    }
+  }
+  
+  // 基于内容类型进行精确推荐
+  switch (structure.contentType) {
+    case 'technical':
+      return ENHANCED_TEMPLATES.find(t => t.key === 'tech_cyber_neon') || ENHANCED_TEMPLATES[0];
+    
+    case 'tutorial':
+      return ENHANCED_TEMPLATES.find(t => t.key === 'vibrant_3d_card') || ENHANCED_TEMPLATES[0];
+    
+    case 'review':
+      return ENHANCED_TEMPLATES.find(t => t.key === 'elegant_serif_magazine') || ENHANCED_TEMPLATES[0];
+    
+    case 'story':
+      return ENHANCED_TEMPLATES.find(t => t.key === 'warm_story_telling') || ENHANCED_TEMPLATES[0];
+    
+    case 'list':
+      if (structure.lists.allItems.length > 5) {
+        return ENHANCED_TEMPLATES.find(t => t.key === 'nature_organic_flow') || ENHANCED_TEMPLATES[0];
+      }
+      return ENHANCED_TEMPLATES.find(t => t.key === 'vibrant_3d_card') || ENHANCED_TEMPLATES[0];
+  }
+  
+  // 基于布局类型推荐
+  switch (structure.designHints.layoutType) {
+    case 'hierarchical':
+      return ENHANCED_TEMPLATES.find(t => t.key === 'elegant_serif_magazine') || ENHANCED_TEMPLATES[0];
+    
+    case 'timeline':
+      return ENHANCED_TEMPLATES.find(t => t.key === 'vibrant_3d_card') || ENHANCED_TEMPLATES[0];
+    
+    case 'grid':
+      return ENHANCED_TEMPLATES.find(t => t.key === 'nature_organic_flow') || ENHANCED_TEMPLATES[0];
+  }
+  
+  // 回退到传统推荐逻辑
+  if (contentAnalysis.emotionalHooks.some(hook => hook.includes('excitement') || hook.includes('amazing'))) {
+    return ENHANCED_TEMPLATES.find(t => t.key === 'vibrant_3d_card') || ENHANCED_TEMPLATES[0];
+  }
+  
+  if (contentAnalysis.emotionalHooks.some(hook => hook.includes('trust') || hook.includes('professional'))) {
+    return ENHANCED_TEMPLATES.find(t => t.key === 'elegant_serif_magazine') || ENHANCED_TEMPLATES[0];
+  }
+  
+  // 高端内容默认使用玻璃质感
+  if (text.length > 30 && aiAnalysis.confidence > 0.7) {
+    return ENHANCED_TEMPLATES.find(t => t.key === 'premium_glass_morphism') || ENHANCED_TEMPLATES[0];
+  }
+  
+  // 默认推荐活力3D卡片
+  console.log('🔄 使用默认推荐模板');
+  return ENHANCED_TEMPLATES.find(t => t.key === 'vibrant_3d_card') || ENHANCED_TEMPLATES[0];
 }
+
+/**
+ * 导出Markdown分析功能供外部使用
+ */
+export { convertToMarkdown, parseMarkdownStructure, optimizeCoverContent };
 
 // 获取增强模板的函数
 export function getEnhancedTemplate(templateKey: string): EnhancedTemplate | null {
