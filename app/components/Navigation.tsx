@@ -61,11 +61,11 @@ export default function Navigation() {
             </Link>
           </div>
 
-          <div className="hidden md:flex items-center space-x-4">
+          {/* <div className="hidden md:flex items-center space-x-4">
             <Link href="/login" className="btn-primary">
               登录/注册
             </Link>
-          </div>
+          </div> */}
         </div>
       </div>
     </nav>

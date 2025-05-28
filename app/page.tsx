@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Navigation from './components/Navigation';
-import UserStatus from './components/UserStatus';
 import { TEMPLATE_COMPONENTS } from './components/InfoCardTemplates';
 import CoverTemplatePreview from './components/CoverTemplatePreview';
 import EditableCard from './components/EditableCard';
@@ -1093,7 +1092,7 @@ export default function Home() {
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => setShowActivationManagement(true)}
-                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
               >
                 激活码管理
               </button>
@@ -1118,13 +1117,13 @@ export default function Home() {
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => setShowLoginForm(true)}
-                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
               >
                 登录
               </button>
               <button
                 onClick={() => setShowRegisterForm(true)}
-                className="inline-flex items-center px-3 py-2 border border-blue-300 text-sm leading-4 font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50"
+                className="inline-flex items-center px-3 py-2 border border-red-300 text-sm leading-4 font-medium rounded-md text-red-700 bg-white hover:bg-red-50"
               >
                 注册
               </button>
@@ -1860,8 +1859,6 @@ export default function Home() {
                       <button
                         className="px-4 py-2 text-sm rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors flex items-center gap-1"
                         onClick={handleBatchDownload}
-                        onClick={handleInfoCardGenerate}
-                        disabled={infoCardLoading}
                       >
                         {infoCardLoading ? (
                           <span className="flex items-center justify-center">

@@ -306,7 +306,6 @@ export default function ActivationManagement() {
           <li>• 每个激活码有效期为30天</li>
           <li>• 激活后可使用1000次API调用</li>
           <li>• 激活码只能使用一次，不能重复激活</li>
-          <li>• 激活状态和剩余次数存储在本地，重新登录时会同步</li>
         </ul>
       </div>
     </div>
