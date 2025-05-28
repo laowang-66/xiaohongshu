@@ -5,10 +5,9 @@ import Navigation from './components/Navigation';
 import { TEMPLATE_COMPONENTS } from './components/InfoCardTemplates';
 import CoverTemplatePreview from './components/CoverTemplatePreview';
 import EditableCard from './components/EditableCard';
-import ContentOptimizer from './components/ContentOptimizer';
+import CoverContentExtractor from './components/ContentOptimizer';
 import { analyzeContentAndRecommend, generateDesignSuggestion } from './utils/aiContentAnalyzer';
 import { ENHANCED_TEMPLATES } from './utils/enhancedTemplates';
-import { OptimizationResult } from './utils/contentOptimizer';
 
 const tabs = [
   { key: 'extract', label: '内容提炼' },
@@ -298,7 +297,6 @@ export default function Home() {
   // 内容优化专用
   const [optimizedContent, setOptimizedContent] = useState('');
   const [showContentOptimizer, setShowContentOptimizer] = useState(false);
-  const [contentOptimizationResult, setContentOptimizationResult] = useState<OptimizationResult | null>(null);
   
   // AI智能推荐
   const [aiRecommendation, setAiRecommendation] = useState<any>(null);
@@ -513,8 +511,9 @@ export default function Home() {
   };
 
   // 处理内容优化结果
-  const handleOptimizationResult = (result: OptimizationResult | null) => {
-    setContentOptimizationResult(result);
+  const handleOptimizationResult = (result: any) => {
+    // 处理封面内容提取结果
+    console.log('封面内容提取结果:', result);
   };
 
   // 处理文案输入变化
@@ -559,26 +558,192 @@ export default function Home() {
       setCardError('请输入封面文案内容');
       return;
     }
+    
     setCardLoading(true);
+    
+    // ⚡ 性能优化：智能进度提示系统
+    const estimatedTime = Math.max(8, Math.min(15, contentToUse.length * 0.3)); // 智能预估时间 8-15秒
+    let progressInterval: NodeJS.Timeout;
+    let currentProgress = 0;
+    let elapsedTime = 0;
+    
+    // 动态进度消息（基于内容特征）
+    const hasNumbers = /\d+/.test(contentToUse);
+    const isLongText = contentToUse.length > 30;
+    const hasEmojis = /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]/u.test(contentToUse);
+    
+    const progressMessages = [
+      '🎨 正在分析内容特征...',
+      hasNumbers ? '📊 检测到数据元素，优化数字展示...' : '✏️ 分析文本结构...',
+      isLongText ? '📝 内容较多，精心设计布局...' : '🎯 快速生成设计方案...',
+      hasEmojis ? '😊 处理表情符号，优化视觉效果...' : '🌈 选择最佳配色方案...',
+      '✨ 最后的细节优化...',
+      '🚀 即将完成...'
+    ];
+    
+    // ⚡ 支持取消操作
+    let abortController = new AbortController();
+    
+    const updateProgress = () => {
+      elapsedTime += 2;
+      const progressPercent = Math.min(95, (elapsedTime / estimatedTime) * 100);
+      
+      if (currentProgress < progressMessages.length - 1) {
+        const message = progressMessages[currentProgress];
+        const timeLeft = Math.max(0, estimatedTime - elapsedTime);
+        setCardError(`${message} (${Math.round(progressPercent)}%, 预计还需${Math.round(timeLeft)}秒)`);
+        currentProgress++;
+      } else {
+        // 后期阶段，显示更精确的进度
+        setCardError(`🔄 AI处理中... (${Math.round(progressPercent)}%)`);
+      }
+    };
+    
+    // 每2秒更新一次进度
+    progressInterval = setInterval(updateProgress, 2000);
+    setCardError(progressMessages[0] + ` (预计${Math.round(estimatedTime)}秒)`);
+    
+    // ⚡ 智能超时处理 - 基于内容复杂度
+    const timeoutDuration = Math.max(20000, estimatedTime * 1000 + 5000); // 预估时间 + 5秒缓冲
+    const timeoutId = setTimeout(() => {
+      clearInterval(progressInterval);
+      abortController.abort();
+      setCardError('⏰ 生成超时，请尝试简化内容或重试');
+      setCardLoading(false);
+    }, timeoutDuration);
+    
     try {
+      const startTime = Date.now();
+      
       const res = await fetch('/api/generate-card', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: contentToUse,
           template: cardTemplate,
-          coverSize: cardSize,
+          size: cardSize,
         }),
+        signal: abortController.signal, // ⚡ 支持取消请求
       });
+      
+      const endTime = Date.now();
+      const duration = ((endTime - startTime) / 1000).toFixed(1);
+      
+      clearTimeout(timeoutId);
+      clearInterval(progressInterval);
+      
       const data = await res.json();
+      
       if (!res.ok || data.error) {
-        setCardError(data.message || '封面生成失败，请稍后重试');
+        // ⚡ 智能错误分析和建议
+        let errorMessage = data.error || '封面生成失败，请稍后重试';
+        let suggestion = '';
+        
+        if (errorMessage.includes('超时')) {
+          errorMessage = '⏰ AI处理超时';
+          suggestion = contentToUse.length > 50 ? '建议简化文案内容' : '请稍后重试';
+        } else if (errorMessage.includes('API') || errorMessage.includes('调用失败')) {
+          errorMessage = '🔧 服务暂时不可用';
+          suggestion = '请稍后重试，或选择其他模板';
+        } else if (errorMessage.includes('模板') || errorMessage.includes('template')) {
+          errorMessage = '🎨 当前模板不可用';
+          suggestion = '请选择其他模板重试';
+        } else if (errorMessage.includes('内容') || errorMessage.includes('text')) {
+          errorMessage = '📝 内容格式问题';
+          suggestion = '请检查输入内容格式';
+        }
+        
+        setCardError(`${errorMessage}${suggestion ? ` - ${suggestion}` : ''}`);
+        
+        // ⚡ 降级处理：如果有降级HTML，仍然显示结果
+        if (data.html) {
+          setCardResult(data.html);
+          setCardResultInfo({
+            ...data,
+            coverSize: data.sizeConfig?.name || '未知尺寸',
+            template: data.templateName || '未知模板',
+            dimensions: {
+              width: data.sizeConfig?.width || 900,
+              height: data.sizeConfig?.height || 1200,
+              ratio: data.sizeConfig?.ratio || '3:4',
+              name: data.sizeConfig?.name || '封面'
+            }
+          });
+          setCardError(`⚠️ ${errorMessage}（已生成降级版本）`);
+        }
       } else {
-        setCardResult(data.result);
-        setCardResultInfo(data);
+        // ⚡ 成功处理
+        setCardResult(data.html);
+        setCardResultInfo({
+          ...data,
+          coverSize: data.sizeConfig?.name || '未知尺寸',
+          template: data.templateName || '未知模板',
+          dimensions: {
+            width: data.sizeConfig?.width || 900,
+            height: data.sizeConfig?.height || 1200,
+            ratio: data.sizeConfig?.ratio || '3:4',
+            name: data.sizeConfig?.name || '封面'
+          }
+        });
+        
+        // ⚡ 智能成功提示
+        const speedLevel = parseFloat(duration) < 8 ? '⚡超快' : 
+                          parseFloat(duration) < 12 ? '🚀很快' : 
+                          parseFloat(duration) < 20 ? '✅正常' : '⏰较慢';
+        
+        const optimizedTip = data.optimized ? '（已优化）' : '';
+        const cachedTip = data.cached ? '（缓存加速）' : '';
+        const pregenTip = data.pregenerated ? '（预生成）' : '';
+        
+        setCardError(`✅ 封面生成成功！${speedLevel} ${duration}秒 ${optimizedTip}${cachedTip}${pregenTip}`);
+        setTimeout(() => setCardError(''), 4000);
+        
+        // ⚡ 性能统计（开发环境）
+        if (data.debug && process.env.NODE_ENV === 'development') {
+          console.log('🔍 生成性能统计:', {
+            实际耗时: `${duration}秒`,
+            预估耗时: `${estimatedTime}秒`,
+            预估准确度: `${Math.abs(parseFloat(duration) - estimatedTime) < 3 ? '✅准确' : '⚠️偏差较大'}`,
+            原始长度: data.debug.originalLength,
+            处理后长度: data.debug.cleanedLength,
+            验证通过: data.debug.validationPassed,
+            错误信息: data.debug.errors
+          });
+        }
       }
     } catch (e) {
-      setCardError('封面生成失败，请稍后重试');
+      clearTimeout(timeoutId);
+      clearInterval(progressInterval);
+      console.error('封面生成错误:', e);
+      
+      // ⚡ 智能错误处理
+      let errorMessage = '封面生成失败，请稍后重试';
+      let suggestion = '';
+      
+      if (e instanceof Error) {
+        if (e.name === 'AbortError') {
+          errorMessage = '🛑 用户取消了生成';
+          suggestion = '您可以重新尝试生成';
+        } else if (e.message.includes('fetch') || e.message.includes('network')) {
+          errorMessage = '🌐 网络连接问题';
+          suggestion = '请检查网络后重试';
+        } else if (e.message.includes('timeout')) {
+          errorMessage = '⏰ 请求超时';
+          suggestion = contentToUse.length > 50 ? '建议简化内容' : '请稍后重试';
+        } else {
+          errorMessage = '🔧 系统错误';
+          suggestion = e.message.length < 50 ? e.message : '请稍后重试';
+        }
+      }
+      
+      setCardError(`${errorMessage}${suggestion ? ` - ${suggestion}` : ''}`);
+      
+      // ⚡ 自动重试提示（仅特定错误）
+      if (e instanceof Error && (e.message.includes('network') || e.message.includes('timeout'))) {
+        setTimeout(() => {
+          setCardError(prev => prev + ' | 💡 可点击重新生成');
+        }, 2000);
+      }
     } finally {
       setCardLoading(false);
     }
@@ -599,7 +764,7 @@ export default function Home() {
     }
   };
 
-  // 封面下载图片
+  // 封面下载图片 - 修复版本，使用智能容器查找
   const handleCardDownload = async () => {
     if (!cardResultInfo?.dimensions) {
       setCardError('没有可下载的内容');
@@ -612,101 +777,39 @@ export default function Home() {
       
       const { downloadCoverImage, generateFileName } = await import('./utils/downloadHelper');
       
-      let contentToDownload = '';
-      let downloadSource = '';
-      
-      // 优先策略：下载容器 -> 编辑内容 -> 原始内容
-      console.log('🔍 开始内容获取流程');
-      
-      // 1. 优先从下载容器获取内容（专门为下载准备的原尺寸版本）
-      try {
-        const downloadContainer = document.querySelector('[data-download-container]') as HTMLElement;
-        if (downloadContainer?.innerHTML?.trim()) {
-          contentToDownload = downloadContainer.innerHTML.trim();
-          downloadSource = '下载容器';
-          console.log('✅ 成功从下载容器获取内容，长度:', contentToDownload.length);
-          
-          // 验证下载容器内容质量
-          if (contentToDownload.includes('rgba(59, 130, 246') || 
-              contentToDownload.includes('editable-') ||
-              contentToDownload.includes('cursor: pointer')) {
-            console.warn('⚠️ 下载容器包含编辑样式，将使用其他源');
-            contentToDownload = '';
-          } else {
-            console.log('✅ 下载容器内容验证通过');
-          }
-        } else {
-          console.log('❌ 下载容器为空或不存在');
-        }
-      } catch (e) {
-        console.warn('❌ 获取下载容器失败:', e);
-      }
-      
-      // 2. 如果下载容器为空或有问题，使用编辑后的内容
-      if (!contentToDownload && editedCardContent) {
-        contentToDownload = editedCardContent;
-        downloadSource = '编辑内容';
-        console.log('✅ 使用编辑后的内容，长度:', contentToDownload.length);
-      }
-      
-      // 3. 最后使用原始生成的内容
-      if (!contentToDownload && cardResult) {
-        contentToDownload = cardResult;
-        downloadSource = '原始内容';
-        console.log('✅ 使用原始生成内容，长度:', contentToDownload.length);
-      }
+      const dimensions = cardResultInfo.dimensions;
+      const filename = generateFileName(
+        dimensions.name.replace(/[\s\/]/g, '_'),
+        dimensions.width,
+        dimensions.height
+      );
 
-      // 内容验证
-      if (!contentToDownload?.trim()) {
-        setCardError('❌ 没有可下载的内容，请重新生成');
-        return;
-      }
+      console.log('📏 下载参数:', {
+        尺寸: `${dimensions.width}x${dimensions.height}`,
+        文件名: filename
+      });
 
-      const { width, height } = cardResultInfo.dimensions;
-      const sizeLabel = coverSizes.find(s => s.key === cardSize)?.label || '封面';
-      const filename = generateFileName(sizeLabel, width, height);
+      setCardError('🖼️ 正在生成图片...');
 
-      console.log('📊 下载参数:');
-      console.log('  📁 文件名:', filename);
-      console.log('  📏 尺寸:', width, 'x', height);
-      console.log('  📄 内容源:', downloadSource);
-      console.log('  📝 内容长度:', contentToDownload.length);
-      console.log('  🔍 内容预览:', contentToDownload.substring(0, 200) + '...');
-
-      setCardError('🎨 正在生成高质量图片...');
-
-      // 执行下载
-      console.log('🖼️ 开始图片生成和下载');
-      const success = await downloadCoverImage(contentToDownload, {
-        width,
-        height,
-        filename,
+      // 使用智能容器查找，不再依赖特定选择器
+      const success = await downloadCoverImage('auto', {
+        width: dimensions.width,
+        height: dimensions.height,
+        filename: filename,
         backgroundColor: null,
         scale: 2
       });
 
-      if (!success) {
-        throw new Error('图片生成失败，请重试');
-      } else {
-        // 下载成功
-        setCardError('');
-        console.log('🎉 下载成功完成!');
-        
-        // 显示成功提示并自动消失
+      if (success) {
         setCardError('✅ 下载成功！');
-        setTimeout(() => {
-          setCardError('');
-        }, 3000);
+        setTimeout(() => setCardError(''), 2000);
+      } else {
+        setCardError('❌ 下载失败，请重试');
       }
+
     } catch (error) {
-      console.error('💥 下载流程失败:', error);
-      const errorMessage = error instanceof Error ? error.message : '未知错误';
-      setCardError(`❌ 封面下载失败：${errorMessage}`);
-      
-      // 错误信息延迟清除
-      setTimeout(() => {
-        setCardError('');
-      }, 5000);
+      console.error('❌ 下载过程出错:', error);
+      setCardError('❌ 下载失败: ' + (error as Error).message);
     }
   };
 
@@ -801,6 +904,12 @@ export default function Home() {
       console.error('批量下载失败:', error);
       setInfoCardError('批量下载失败，请稍后重试');
     }
+  };
+
+  // 处理内容优化结果
+  const handleExtractionResult = (result: any) => {
+    // 处理封面内容提取结果
+    console.log('封面内容提取结果:', result);
   };
 
   return (
@@ -1240,12 +1349,12 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* 内容智能优化组件 */}
-                <ContentOptimizer
+                {/* 封面内容智能提取组件 */}
+                <CoverContentExtractor
                   originalContent={cardInput}
                   selectedPlatform={cardSize}
                   onContentSelect={handleOptimizedContentSelect}
-                  onOptimizationResult={handleOptimizationResult}
+                  onExtractionResult={handleExtractionResult}
                   isVisible={showContentOptimizer}
                 />
               </div>

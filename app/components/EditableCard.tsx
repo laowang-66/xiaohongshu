@@ -162,109 +162,88 @@ const EditableCard: React.FC<EditableCardProps> = ({
   // 同步下载容器内容 - 改进版本
   const syncDownloadContainer = () => {
     if (containerRef.current && downloadContainerRef.current) {
-      // 克隆编辑容器的内容
-      const clonedContent = containerRef.current.cloneNode(true) as HTMLElement;
+      // 获取原始HTML内容
+      const originalHtml = htmlContent;
       
-      // 更全面的样式清理函数
-      const cleanEditingStyles = (element: HTMLElement) => {
-        // 移除编辑相关的样式
-        const stylesToRemove = [
-          'cursor', 'transition', 'backgroundColor', 'outline', 
-          'outlineOffset', 'border', 'borderRadius', 'padding', 
-          'margin', 'boxShadow', 'opacity', 'transform'
-        ];
+      // 设置下载容器的内容为原始HTML，确保完全一致
+      downloadContainerRef.current.innerHTML = originalHtml;
+      
+      // 应用原始尺寸样式，不进行任何缩放
+      const downloadContent = downloadContainerRef.current.firstElementChild as HTMLElement;
+      if (downloadContent) {
+        downloadContent.style.width = `${dimensions.width}px`;
+        downloadContent.style.height = `${dimensions.height}px`;
+        downloadContent.style.position = 'relative';
+        downloadContent.style.overflow = 'hidden';
+        downloadContent.style.fontFamily = "'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif";
+        downloadContent.style.transform = 'none';
+        downloadContent.style.transformOrigin = 'initial';
         
-        stylesToRemove.forEach(prop => {
-          element.style.removeProperty(prop);
-        });
-        
-        // 移除编辑相关的类名
-        element.classList.remove('editable-element', 'editable-hint');
-        
-        // 移除data属性
-        element.removeAttribute('data-editable-id');
-        element.removeAttribute('data-text-element');
-        
-        // 确保保留原始的样式属性
-        const originalStyle = element.getAttribute('style');
-        if (originalStyle) {
-          // 清理编辑相关的样式，但保留原始样式
-          const cleanedStyle = originalStyle
-            .replace(/cursor:\s*[^;]+;?/g, '')
-            .replace(/transition:\s*[^;]+;?/g, '')
-            .replace(/background-color:\s*rgba\(59,\s*130,\s*246[^)]*\);?/g, '')
-            .replace(/outline[^:]*:\s*[^;]*rgba\(59,\s*130,\s*246[^)]*\)[^;]*;?/g, '')
-            .replace(/box-shadow:\s*[^;]*rgba\(59,\s*130,\s*246[^)]*\)[^;]*;?/g, '')
-            .replace(/;\s*;/g, ';')
-            .replace(/^\s*;\s*/, '')
-            .replace(/\s*;\s*$/, '');
+        // 递归清理所有可能影响渲染的样式
+        const cleanForDownload = (element: HTMLElement) => {
+          // 移除编辑相关的属性和样式
+          element.removeAttribute('data-editable-id');
+          element.removeAttribute('data-text-element');
+          element.removeAttribute('contenteditable');
+          element.classList.remove('editable-element', 'editable-hint');
           
-          if (cleanedStyle.trim()) {
-            element.setAttribute('style', cleanedStyle);
-          } else {
-            element.removeAttribute('style');
+          // 移除可能导致渲染差异的样式
+          const problematicStyles = [
+            'cursor', 'outline', 'outline-offset', 'transition',
+            'user-select', 'pointer-events', 'box-shadow'
+          ];
+          
+          problematicStyles.forEach(style => {
+            element.style.removeProperty(style);
+          });
+          
+          // 确保字体一致性
+          if (!element.style.fontFamily) {
+            element.style.fontFamily = "'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif";
           }
-        }
+          
+          // 递归处理子元素
+          Array.from(element.children).forEach(child => {
+            cleanForDownload(child as HTMLElement);
+          });
+        };
         
-        // 递归清理子元素
-        const children = element.children;
-        for (let i = 0; i < children.length; i++) {
-          cleanEditingStyles(children[i] as HTMLElement);
-        }
-      };
-      
-      // 清理所有编辑样式
-      cleanEditingStyles(clonedContent);
-      
-      // 确保下载容器有正确的样式
-      downloadContainerRef.current.style.width = `${dimensions.width}px`;
-      downloadContainerRef.current.style.height = `${dimensions.height}px`;
-      downloadContainerRef.current.style.fontFamily = 'system-ui, -apple-system, sans-serif';
-      downloadContainerRef.current.style.transform = 'none';
-      downloadContainerRef.current.style.transformOrigin = 'initial';
-      downloadContainerRef.current.style.position = 'absolute';
-      downloadContainerRef.current.style.left = '-9999px';
-      downloadContainerRef.current.style.top = '-9999px';
-      downloadContainerRef.current.style.visibility = 'hidden';
-      downloadContainerRef.current.style.overflow = 'hidden';
-      
-      // 设置下载容器的内容
-      downloadContainerRef.current.innerHTML = clonedContent.innerHTML;
-      
-      console.log('✅ 下载容器内容已同步并清理样式');
-      console.log('📏 下载容器尺寸:', dimensions.width, 'x', dimensions.height);
-      console.log('📄 下载容器内容长度:', downloadContainerRef.current.innerHTML.length);
-      
-      // 验证同步结果
-      const downloadHTML = downloadContainerRef.current.innerHTML;
-      if (downloadHTML.includes('rgba(59, 130, 246') || downloadHTML.includes('editable-')) {
-        console.warn('⚠️ 下载容器中仍包含编辑样式，需要进一步清理');
-      } else {
-        console.log('✅ 下载容器样式清理验证通过');
+        cleanForDownload(downloadContent);
       }
+      
+      console.log('📥 下载容器已同步，尺寸:', dimensions.width, 'x', dimensions.height);
     }
   };
 
-  // 强制同步下载容器 - 新增方法
+  // 强制同步下载容器 - 用于确保下载前的一致性
   const forceSyncDownloadContainer = () => {
     return new Promise<void>((resolve) => {
-      // 多次尝试同步，确保稳定性
-      let attempts = 0;
-      const maxAttempts = 3;
+      syncDownloadContainer();
       
+      // 等待DOM更新完成
       const attemptSync = () => {
-        attempts++;
-        syncDownloadContainer();
-        
-        if (attempts < maxAttempts) {
-          setTimeout(attemptSync, 50);
+        if (downloadContainerRef.current?.firstElementChild) {
+          const downloadElement = downloadContainerRef.current.firstElementChild as HTMLElement;
+          
+          // 验证尺寸是否正确
+          if (downloadElement.offsetWidth === dimensions.width && 
+              downloadElement.offsetHeight === dimensions.height) {
+            resolve();
+          } else {
+            // 强制设置尺寸
+            downloadElement.style.width = `${dimensions.width}px`;
+            downloadElement.style.height = `${dimensions.height}px`;
+            
+            requestAnimationFrame(() => {
+              resolve();
+            });
+          }
         } else {
-          console.log(`🔄 完成${maxAttempts}次同步尝试`);
-          resolve();
+          setTimeout(attemptSync, 10);
         }
       };
       
-      attemptSync();
+      requestAnimationFrame(attemptSync);
     });
   };
 
@@ -419,7 +398,8 @@ const EditableCard: React.FC<EditableCardProps> = ({
                 ref={containerRef}
                 className="block"
                 style={contentStyle}
-                data-editable-card-container
+                data-editable-card-container="true"
+                data-preview-container="true"
               >
                 {/* 内容将通过 innerHTML 动态设置 */}
               </div>

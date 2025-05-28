@@ -1,39 +1,57 @@
-import React, { useState, useEffect } from 'react';
-import { OptimizationResult } from '../utils/contentOptimizer';
+'use client';
 
-interface ContentOptimizerProps {
+import React, { useState, useEffect } from 'react';
+
+interface CoverContentVersion {
+  version: number;
+  mainTitle: string;
+  subTitle?: string;
+  tags?: string;
+  emotionWords?: string;
+  numbers?: string;
+  coreValue?: string;
+  reason?: string;
+}
+
+interface CoverExtractorProps {
   originalContent: string;
   selectedPlatform: string;
   onContentSelect: (content: string) => void;
-  onOptimizationResult?: (result: OptimizationResult | null) => void;
+  onExtractionResult?: (result: any) => void;
   isVisible: boolean;
 }
 
-const ContentOptimizer: React.FC<ContentOptimizerProps> = ({
+export default function CoverContentExtractor({
   originalContent,
   selectedPlatform,
   onContentSelect,
-  onOptimizationResult,
+  onExtractionResult,
   isVisible
-}) => {
+}: CoverExtractorProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [extractedVersions, setExtractedVersions] = useState<CoverContentVersion[]>([]);
+  const [selectedVersion, setSelectedVersion] = useState<CoverContentVersion | null>(null);
   const [error, setError] = useState<string>('');
-  const [optimizationResult, setOptimizationResult] = useState<OptimizationResult | null>(null);
-  const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
 
-  // 自动触发优化
+  // 平台配置
+  const platformConfig = {
+    xiaohongshu: { name: '小红书封面', icon: '📱', color: 'bg-red-50 border-red-200' },
+    video: { name: '短视频封面', icon: '📺', color: 'bg-purple-50 border-purple-200' },
+    wechat: { name: '公众号封面', icon: '📰', color: 'bg-green-50 border-green-200' }
+  };
+
   useEffect(() => {
-    if (isVisible && originalContent.trim() && originalContent.length > 5) {
-      optimizeContent();
+    if (isVisible && originalContent.trim().length > 5) {
+      extractCoverContent();
     }
   }, [originalContent, selectedPlatform, isVisible]);
 
-  const optimizeContent = async () => {
+  const extractCoverContent = async () => {
     if (!originalContent.trim()) return;
 
     setIsLoading(true);
     setError('');
-    setOptimizationResult(null);
+    setExtractedVersions([]);
     setSelectedVersion(null);
 
     try {
@@ -44,199 +62,193 @@ const ContentOptimizer: React.FC<ContentOptimizerProps> = ({
         },
         body: JSON.stringify({
           content: originalContent,
-          platform: selectedPlatform
+          platform: selectedPlatform,
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error('封面内容提取失败');
       }
 
-      const result = await response.json();
+      const data = await response.json();
       
-      if (result.error) {
-        throw new Error(result.error);
+      if (data.success && data.extractedVersions) {
+        setExtractedVersions(data.extractedVersions);
+        onExtractionResult?.(data);
+      } else {
+        throw new Error(data.error || '提取失败');
       }
 
-      setOptimizationResult(result);
-      onOptimizationResult?.(result);
-      
-    } catch (err) {
-      console.error('内容优化失败:', err);
-      setError(err instanceof Error ? err.message : '内容优化失败，请稍后重试');
-      onOptimizationResult?.(null);
+    } catch (error) {
+      console.error('封面内容提取错误:', error);
+      setError(error instanceof Error ? error.message : '提取失败，请重试');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleVersionSelect = (version: OptimizationResult['optimizedVersions'][0], index: number) => {
-    setSelectedVersion(index);
-    const selectedContent = version.subtitle 
-      ? `${version.mainTitle}\n${version.subtitle}`
-      : version.mainTitle;
-    onContentSelect(selectedContent);
-  };
-
-  const getPlatformName = (platform: string): string => {
-    const platforms: Record<string, string> = {
-      'xiaohongshu': '小红书',
-      'video': '短视频',
-      'wechat': '公众号'
-    };
-    return platforms[platform] || platform;
-  };
-
-  const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 0.8) return 'text-green-600 bg-green-50 border-green-200';
-    if (confidence >= 0.6) return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-    return 'text-gray-600 bg-gray-50 border-gray-200';
-  };
-
-  const getConfidenceText = (confidence: number) => {
-    if (confidence >= 0.8) return '推荐';
-    if (confidence >= 0.6) return '不错';
-    return '一般';
+  const handleVersionSelect = (version: CoverContentVersion) => {
+    setSelectedVersion(version);
+    
+    // 根据不同平台构造适合封面的内容
+    let coverContent = '';
+    
+    if (selectedPlatform === 'xiaohongshu') {
+      coverContent = version.mainTitle || '';
+      if (version.subTitle) coverContent += '\n' + version.subTitle;
+      if (version.tags) coverContent += '\n' + version.tags;
+    } else if (selectedPlatform === 'video') {
+      coverContent = version.mainTitle || '';
+      if (version.numbers) coverContent += ' ' + version.numbers;
+      if (version.emotionWords) coverContent += ' ' + version.emotionWords;
+    } else if (selectedPlatform === 'wechat') {
+      coverContent = version.mainTitle || '';
+      if (version.subTitle) coverContent += ' - ' + version.subTitle;
+    }
+    
+    onContentSelect(coverContent);
   };
 
   if (!isVisible) return null;
 
+  const currentPlatform = platformConfig[selectedPlatform as keyof typeof platformConfig] || platformConfig.xiaohongshu;
+
   return (
-    <div className="mt-6 p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-200">
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-2xl">✨</span>
-        <h3 className="text-lg font-bold text-blue-800">内容智能优化</h3>
-        <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-          {getPlatformName(selectedPlatform)}专用
-        </span>
+    <div className={`mt-6 p-6 rounded-xl border-2 transition-all duration-300 ${currentPlatform.color}`}>
+      <div className="flex items-center gap-3 mb-4">
+        <span className="text-2xl">{currentPlatform.icon}</span>
+        <div>
+          <h3 className="text-lg font-bold text-gray-800">
+            🎯 封面内容智能提取
+          </h3>
+          <p className="text-sm text-gray-600">
+            为{currentPlatform.name}提取最适合的封面元素
+          </p>
+        </div>
       </div>
 
       {isLoading && (
-        <div className="flex items-center justify-center py-8">
-          <div className="flex items-center gap-3">
-            <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span className="text-blue-700 font-medium">AI正在优化内容...</span>
+        <div className="text-center py-8">
+          <div className="inline-flex items-center gap-3">
+            <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-blue-600">🤖 AI正在分析内容...</span>
           </div>
         </div>
       )}
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg mb-4">
-          <div className="text-red-700 text-sm">
-            <span className="font-medium">优化失败：</span>{error}
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-red-500">⚠️</span>
+            <span className="text-red-700 font-medium">提取失败</span>
           </div>
+          <p className="text-red-600 text-sm mt-1">{error}</p>
           <button
-            onClick={optimizeContent}
-            className="mt-2 px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors text-xs"
+            onClick={extractCoverContent}
+            className="mt-2 px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
           >
-            重试
+            重新提取
           </button>
         </div>
       )}
 
-      {optimizationResult && (
+      {extractedVersions.length > 0 && (
         <div className="space-y-4">
-          <div className="grid md:grid-cols-3 gap-4 mb-6">
-            {optimizationResult.optimizedVersions.map((version, index) => (
+          <div className="flex items-center gap-2 text-sm text-gray-700">
+            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+            <span>✨ 已提取 {extractedVersions.length} 个封面版本，点击选择最适合的：</span>
+          </div>
+          
+          <div className="grid gap-4">
+            {extractedVersions.map((version, index) => (
               <div
                 key={index}
-                className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${
-                  selectedVersion === index
-                    ? 'border-blue-500 bg-blue-50 shadow-md transform scale-105'
-                    : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm'
+                className={`p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
+                  selectedVersion?.version === version.version
+                    ? 'border-blue-500 bg-blue-50 shadow-lg transform scale-[1.02]'
+                    : 'border-gray-200 bg-white hover:border-gray-300'
                 }`}
-                onClick={() => handleVersionSelect(version, index)}
+                onClick={() => handleVersionSelect(version)}
               >
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-bold text-gray-700">版本 {version.version}</span>
-                  <span className={`px-2 py-1 rounded-full text-xs border ${getConfidenceColor(version.confidence)}`}>
-                    {getConfidenceText(version.confidence)}
+                <div className="flex items-start justify-between mb-3">
+                  <span className="px-3 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">
+                    版本 {version.version}
                   </span>
+                  {selectedVersion?.version === version.version && (
+                    <span className="px-2 py-1 bg-blue-500 text-white text-xs rounded-full flex items-center gap-1">
+                      ✓ 已选择
+                    </span>
+                  )}
                 </div>
-                
+
                 <div className="space-y-2">
-                  <div className="font-semibold text-gray-800 leading-tight">
-                    {version.mainTitle}
-                  </div>
-                  
-                  {version.subtitle && (
-                    <div className="text-sm text-gray-600 leading-relaxed">
-                      {version.subtitle}
+                  {version.mainTitle && (
+                    <div>
+                      <span className="text-xs text-gray-500 block">
+                        {selectedPlatform === 'video' ? '核心标题' : '主标题'}:
+                      </span>
+                      <span className="font-bold text-gray-800 block">{version.mainTitle}</span>
                     </div>
                   )}
                   
-                  <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                    {version.emotionalTone}
-                  </div>
+                  {version.subTitle && (
+                    <div>
+                      <span className="text-xs text-gray-500 block">副标题:</span>
+                      <span className="text-gray-700 block">{version.subTitle}</span>
+                    </div>
+                  )}
                   
-                  <div className="text-xs text-gray-500 leading-relaxed">
-                    {version.reasoning}
-                  </div>
+                  {version.tags && (
+                    <div>
+                      <span className="text-xs text-gray-500 block">标签:</span>
+                      <span className="text-blue-600 text-sm block">{version.tags}</span>
+                    </div>
+                  )}
+                  
+                  {version.emotionWords && (
+                    <div>
+                      <span className="text-xs text-gray-500 block">情感词汇:</span>
+                      <span className="text-orange-600 font-medium text-sm block">{version.emotionWords}</span>
+                    </div>
+                  )}
+                  
+                  {version.numbers && (
+                    <div>
+                      <span className="text-xs text-gray-500 block">数字亮点:</span>
+                      <span className="text-green-600 font-medium text-sm block">{version.numbers}</span>
+                    </div>
+                  )}
+                  
+                  {version.coreValue && (
+                    <div>
+                      <span className="text-xs text-gray-500 block">核心价值:</span>
+                      <span className="text-purple-600 text-sm block">{version.coreValue}</span>
+                    </div>
+                  )}
+                  
+                  {version.reason && (
+                    <div className="pt-2 border-t border-gray-100">
+                      <span className="text-xs text-gray-500 block">适用理由:</span>
+                      <span className="text-gray-600 text-xs block leading-relaxed">{version.reason}</span>
+                    </div>
+                  )}
                 </div>
-                
-                {selectedVersion === index && (
-                  <div className="mt-3 text-xs text-blue-600 font-medium flex items-center gap-1">
-                    <span>✓</span>
-                    <span>已选择此版本</span>
-                  </div>
-                )}
               </div>
             ))}
           </div>
 
-          {/* 平台洞察 */}
-          <div className="p-4 bg-white rounded-lg border border-gray-200">
-            <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-              <span>🎯</span>
-              <span>平台优化洞察</span>
-            </h4>
-            
-            <div className="grid md:grid-cols-2 gap-4 text-sm">
-              <div>
-                <div className="font-medium text-gray-700 mb-2">内容类型</div>
-                <div className="px-3 py-1 bg-gray-100 rounded-full text-gray-600 inline-block">
-                  {optimizationResult.platformInsights.contentType}
-                </div>
+          {selectedVersion && (
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-blue-600 font-medium">✨ 已选择版本 {selectedVersion.version}</span>
               </div>
-              
-              <div>
-                <div className="font-medium text-gray-700 mb-2">推荐风格</div>
-                <div className="px-3 py-1 bg-gray-100 rounded-full text-gray-600 inline-block">
-                  {optimizationResult.platformInsights.recommendedStyle}
-                </div>
+              <div className="text-sm text-blue-700">
+                该版本的封面内容已自动填入生成框，点击"生成专业封面"即可使用优化后的内容。
               </div>
             </div>
-            
-            {optimizationResult.platformInsights.keyOptimizations.length > 0 && (
-              <div className="mt-4">
-                <div className="font-medium text-gray-700 mb-2">优化建议</div>
-                <ul className="space-y-1">
-                  {optimizationResult.platformInsights.keyOptimizations.map((optimization, index) => (
-                    <li key={index} className="text-xs text-gray-600 flex items-start gap-2">
-                      <span className="text-blue-500 mt-0.5">•</span>
-                      <span>{optimization}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-
-          <div className="text-center">
-            <button
-              onClick={() => setSelectedVersion(null)}
-              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
-            >
-              使用原始内容
-            </button>
-          </div>
+          )}
         </div>
       )}
     </div>
   );
-};
-
-export default ContentOptimizer; 
+} 
