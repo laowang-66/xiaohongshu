@@ -2,6 +2,9 @@
 
 import { motion } from 'framer-motion'
 import { useState } from 'react'
+import Navigation from '../components/Navigation'
+import UserStatus from '../components/UserStatus'
+import { apiCall, isAuthenticated, isActivated } from '../lib/auth'
 
 export default function ScriptPage() {
   const [formData, setFormData] = useState({
@@ -20,12 +23,22 @@ export default function ScriptPage() {
     setIsLoading(true)
     setError('')
 
+    // 检查认证和激活码
+    if (!isAuthenticated()) {
+      setError('请先登录')
+      setIsLoading(false)
+      return
+    }
+    
+    if (!isActivated()) {
+      setError('激活码已过期或次数已用完，请激活新激活码')
+      setIsLoading(false)
+      return
+    }
+
     try {
-      const response = await fetch('/api/generate-script', {
+      const response = await apiCall('/api/generate-script', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(formData),
       })
 
@@ -54,21 +67,8 @@ export default function ScriptPage() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      {/* Navigation */}
-      <nav className="bg-white shadow-sm">
-        <div className="container-custom py-4">
-          <div className="flex justify-between items-center">
-            <div className="text-2xl font-bold text-primary">小红助手</div>
-            <div className="space-x-4">
-              <a href="/" className="text-gray-600 hover:text-primary">首页</a>
-              <a href="#" className="text-gray-600 hover:text-primary">笔记挖掘</a>
-              <a href="#" className="text-gray-600 hover:text-primary">实用工具</a>
-              <a href="#" className="text-gray-600 hover:text-primary">今日热榜</a>
-              <button className="btn-primary">登录/注册</button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navigation />
+      <UserStatus />
 
       {/* Script Generator Section */}
       <section className="py-20">

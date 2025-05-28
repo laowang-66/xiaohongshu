@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Navigation from './components/Navigation';
+import UserStatus from './components/UserStatus';
 import { TEMPLATE_COMPONENTS } from './components/InfoCardTemplates';
 import CoverTemplatePreview from './components/CoverTemplatePreview';
 import EditableCard from './components/EditableCard';
@@ -9,6 +10,7 @@ import ContentOptimizer from './components/ContentOptimizer';
 import { analyzeContentAndRecommend, generateDesignSuggestion } from './utils/aiContentAnalyzer';
 import { ENHANCED_TEMPLATES } from './utils/enhancedTemplates';
 import { OptimizationResult } from './utils/contentOptimizer';
+import { apiCall, isAuthenticated, isKeyValid } from './lib/auth';
 
 const tabs = [
   { key: 'extract', label: '内容提炼' },
@@ -317,6 +319,18 @@ export default function Home() {
     setError('');
     setResult('');
     setCopied(false);
+    
+    // 检查认证和密钥
+    if (!isAuthenticated()) {
+      setError('请先登录');
+      return;
+    }
+    
+    if (!isKeyValid()) {
+      setError('密钥已过期或次数已用完，请激活新密钥');
+      return;
+    }
+    
     if (!input.trim()) {
       setError('请输入内容链接');
       return;
@@ -330,9 +344,8 @@ export default function Home() {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/extract-and-generate', {
+      const res = await apiCall('/api/extract-and-generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           link: input,
           mode: generateMode,
@@ -350,7 +363,7 @@ export default function Home() {
         setResult(data.note);
       }
     } catch (e) {
-      setError('生成失败，请稍后重试');
+      setError(e instanceof Error ? e.message : '生成失败，请稍后重试');
     } finally {
       setLoading(false);
     }
@@ -372,15 +385,26 @@ export default function Home() {
     setSearchNote('');
     setSearchNoteSource(null);
     setSearchCopied(false);
+    
+    // 检查认证和密钥
+    if (!isAuthenticated()) {
+      setSearchError('请先登录');
+      return;
+    }
+    
+    if (!isKeyValid()) {
+      setSearchError('密钥已过期或次数已用完，请激活新密钥');
+      return;
+    }
+    
     if (!searchInput.trim()) {
       setSearchError('请输入搜索关键词');
       return;
     }
     setSearchLoading(true);
     try {
-      const res = await fetch('/api/search', {
+      const res = await apiCall('/api/search', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           query: searchInput,
           searchType: searchType,
@@ -398,7 +422,7 @@ export default function Home() {
         });
       }
     } catch (e) {
-      setSearchError('搜索失败，请稍后重试');
+      setSearchError(e instanceof Error ? e.message : '搜索失败，请稍后重试');
     } finally {
       setSearchLoading(false);
     }
@@ -418,10 +442,20 @@ export default function Home() {
     setUrlGeneratingIndex(index);
     setSearchError('');
 
+    // 检查认证和密钥
+    if (!isAuthenticated()) {
+      setSearchError('请先登录');
+      return;
+    }
+    
+    if (!isKeyValid()) {
+      setSearchError('密钥已过期或次数已用完，请激活新密钥');
+      return;
+    }
+
     try {
-      const res = await fetch('/api/generate-from-url', {
+      const res = await apiCall('/api/generate-from-url', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           url: item.link,
           title: item.title,
@@ -445,7 +479,7 @@ export default function Home() {
         setSearchCopied(false);
       }
     } catch (e) {
-      setSearchError('生成失败，请稍后重试');
+      setSearchError(e instanceof Error ? e.message : '生成失败，请稍后重试');
     } finally {
       setUrlGeneratingIndex(null);
     }
@@ -456,15 +490,26 @@ export default function Home() {
     setRewriteError('');
     setRewriteResult('');
     setRewriteCopied(false);
+    
+    // 检查认证和密钥
+    if (!isAuthenticated()) {
+      setRewriteError('请先登录');
+      return;
+    }
+    
+    if (!isKeyValid()) {
+      setRewriteError('密钥已过期或次数已用完，请激活新密钥');
+      return;
+    }
+    
     if (!rewriteInput.trim()) {
       setRewriteError('请输入需要改写的内容');
       return;
     }
     setRewriteLoading(true);
     try {
-      const res = await fetch('/api/rewrite', {
+      const res = await apiCall('/api/rewrite', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: rewriteInput,
           style: rewriteStyles.find(s => s.key === rewriteStyle)?.label || '',
@@ -477,7 +522,7 @@ export default function Home() {
         setRewriteResult(data.result);
       }
     } catch (e) {
-      setRewriteError('改写失败，请稍后重试');
+      setRewriteError(e instanceof Error ? e.message : '改写失败，请稍后重试');
     } finally {
       setRewriteLoading(false);
     }
@@ -552,6 +597,17 @@ export default function Home() {
     setCardCopied(false);
     setEditedCardContent(''); // 重置编辑内容
     
+    // 检查认证和密钥
+    if (!isAuthenticated()) {
+      setCardError('请先登录');
+      return;
+    }
+    
+    if (!isKeyValid()) {
+      setCardError('密钥已过期或次数已用完，请激活新密钥');
+      return;
+    }
+    
     // 使用优化后的内容或原始输入
     const contentToUse = optimizedContent || cardInput;
     
@@ -561,9 +617,8 @@ export default function Home() {
     }
     setCardLoading(true);
     try {
-      const res = await fetch('/api/generate-card', {
+      const res = await apiCall('/api/generate-card', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: contentToUse,
           template: cardTemplate,
@@ -578,7 +633,7 @@ export default function Home() {
         setCardResultInfo(data);
       }
     } catch (e) {
-      setCardError('封面生成失败，请稍后重试');
+      setCardError(e instanceof Error ? e.message : '封面生成失败，请稍后重试');
     } finally {
       setCardLoading(false);
     }
@@ -714,15 +769,26 @@ export default function Home() {
   const handleInfoCardGenerate = async () => {
     setInfoCardError('');
     setInfoCardCopied(false);
+    
+    // 检查认证和密钥
+    if (!isAuthenticated()) {
+      setInfoCardError('请先登录');
+      return;
+    }
+    
+    if (!isKeyValid()) {
+      setInfoCardError('密钥已过期或次数已用完，请激活新密钥');
+      return;
+    }
+    
     if (!infoCardInput.trim()) {
       setInfoCardError('请输入信息卡片内容');
       return;
     }
     setInfoCardLoading(true);
     try {
-      const res = await fetch('/api/generate-info-card', {
+      const res = await apiCall('/api/generate-info-card', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           content: infoCardInput,
         }),
@@ -734,7 +800,7 @@ export default function Home() {
         setInfoCardResult(data.cards);
       }
     } catch (e) {
-      setInfoCardError('信息卡片生成失败，请稍后重试');
+      setInfoCardError(e instanceof Error ? e.message : '信息卡片生成失败，请稍后重试');
     } finally {
       setInfoCardLoading(false);
     }
@@ -806,6 +872,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-gray-50">
       <Navigation />
+      <UserStatus />
       <section className="py-10">
         <div className="container-custom">
           {/* 功能介绍标题 */}

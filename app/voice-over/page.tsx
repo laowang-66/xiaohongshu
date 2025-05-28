@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import Navigation from '../components/Navigation'
+import UserStatus from '../components/UserStatus'
+import { apiCall, isAuthenticated, isActivated } from '../lib/auth'
 
 export default function VoiceOverPage() {
   const [formData, setFormData] = useState({
@@ -20,12 +22,22 @@ export default function VoiceOverPage() {
     setIsLoading(true)
     setError('')
 
+    // 检查认证和激活码
+    if (!isAuthenticated()) {
+      setError('请先登录')
+      setIsLoading(false)
+      return
+    }
+    
+    if (!isActivated()) {
+      setError('激活码已过期或次数已用完，请激活新激活码')
+      setIsLoading(false)
+      return
+    }
+
     try {
-      const response = await fetch('/api/generate-voice-over', {
+      const response = await apiCall('/api/generate-voice-over', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(formData),
       })
 
@@ -55,6 +67,7 @@ export default function VoiceOverPage() {
   return (
     <main className="min-h-screen bg-gray-50">
       <Navigation />
+      <UserStatus />
 
       {/* Voice Over Script Generator Section */}
       <section className="py-20">
