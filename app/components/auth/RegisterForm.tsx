@@ -21,9 +21,10 @@ interface FormErrors {
 
 interface RegisterFormProps {
   onSwitchToLogin?: () => void;
+  onSuccess?: () => void;
 }
 
-export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
+export default function RegisterForm({ onSwitchToLogin, onSuccess }: RegisterFormProps) {
   const { register, loading } = useAuth();
   const [formData, setFormData] = useState<FormData>({
     phone: '',
@@ -86,8 +87,12 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
         setErrors({
           general: result.message || '注册失败，请重试'
         });
+      } else {
+        // 注册成功，调用成功回调
+        if (onSuccess) {
+          onSuccess();
+        }
       }
-      // 如果注册成功，useAuth hook会自动更新用户状态，主页面会自动切换
     } catch (error) {
       setErrors({
         general: error instanceof Error ? error.message : '注册失败，请重试'

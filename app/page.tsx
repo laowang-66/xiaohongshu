@@ -2,6 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import Navigation from './components/Navigation';
+import TabNavigation from './components/TabNavigation';
+import FeatureDescription from './components/FeatureDescription';
+import UserStatusBar from './components/UserStatusBar';
+import AuthModals from './components/AuthModals';
 import { TEMPLATE_COMPONENTS } from './components/InfoCardTemplates';
 import CoverTemplatePreview from './components/CoverTemplatePreview';
 import EditableCard from './components/EditableCard';
@@ -9,9 +13,6 @@ import CoverContentExtractor from './components/ContentOptimizer';
 import { analyzeContentAndRecommend } from './utils/aiContentAnalyzer';
 import { ENHANCED_TEMPLATES } from './utils/enhancedTemplates';
 import { apiCall, isAuthenticated } from './lib/auth';
-import LoginForm from './components/auth/LoginForm';
-import RegisterForm from './components/auth/RegisterForm';
-import ActivationManagement from './components/auth/ActivationManagement';
 
 const tabs = [
   { key: 'extract', label: '内容提炼' },
@@ -289,12 +290,9 @@ export default function Home() {
 
   // 注册成功处理
   const handleRegisterSuccess = () => {
-    const { getCurrentUser } = require('./lib/auth');
-    const user = getCurrentUser();
-    setIsLoggedIn(true);
-    setCurrentUser(user);
-    setShowLoginForm(false);
+    // 注册成功后不自动登录，让用户手动登录
     setShowRegisterForm(false);
+    setShowLoginForm(true); // 切换到登录模态框
   };
 
   // 登出处理
@@ -1009,128 +1007,38 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* 登录表单模态框 */}
-      {showLoginForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">用户登录</h2>
-              <button
-                onClick={() => setShowLoginForm(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                ✕
-              </button>
-            </div>
-            <LoginForm
-              onSuccess={handleLoginSuccess}
-              onSwitchToRegister={() => {
-                setShowLoginForm(false);
-                setShowRegisterForm(true);
-              }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* 注册表单模态框 */}
-      {showRegisterForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">用户注册</h2>
-              <button
-                onClick={() => setShowRegisterForm(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                ✕
-              </button>
-            </div>
-            <RegisterForm
-              onSwitchToLogin={() => {
-                setShowRegisterForm(false);
-                setShowLoginForm(true);
-              }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* 激活码管理模态框 */}
-      {showActivationManagement && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">激活码管理</h2>
-              <button
-                onClick={() => setShowActivationManagement(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                ✕
-              </button>
-            </div>
-            <ActivationManagement />
-          </div>
-        </div>
-      )}
+      {/* 认证模态框 */}
+      <AuthModals
+        showLoginForm={showLoginForm}
+        showRegisterForm={showRegisterForm}
+        showActivationManagement={showActivationManagement}
+        onCloseLogin={() => setShowLoginForm(false)}
+        onCloseRegister={() => setShowRegisterForm(false)}
+        onCloseActivationManagement={() => setShowActivationManagement(false)}
+        onLoginSuccess={handleLoginSuccess}
+        onRegisterSuccess={handleRegisterSuccess}
+        onSwitchToRegister={() => {
+          setShowLoginForm(false);
+          setShowRegisterForm(true);
+        }}
+        onSwitchToLogin={() => {
+          setShowRegisterForm(false);
+          setShowLoginForm(true);
+        }}
+      />
 
       {/* 导航栏 */}
       <Navigation />
 
       {/* 用户状态栏 */}
-      {isLoggedIn && (
-        <div className="bg-white rounded-lg shadow-sm border p-4 mb-6 mx-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <span className="text-sm font-medium">
-                欢迎，{currentUser?.nickname || currentUser?.name || '用户'}
-              </span>
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                已登录
-              </span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setShowActivationManagement(true)}
-                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
-              >
-                激活码管理
-              </button>
-              <button
-                onClick={handleLogout}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-              >
-                登出
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 未登录提示 */}
-      {!isLoggedIn && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 mx-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <span className="text-yellow-800">请登录后使用完整功能</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setShowLoginForm(true)}
-                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
-              >
-                登录
-              </button>
-              <button
-                onClick={() => setShowRegisterForm(true)}
-                className="inline-flex items-center px-3 py-2 border border-red-300 text-sm leading-4 font-medium rounded-md text-red-700 bg-white hover:bg-red-50"
-              >
-                注册
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <UserStatusBar
+        isLoggedIn={isLoggedIn}
+        currentUser={currentUser}
+        onShowLogin={() => setShowLoginForm(true)}
+        onShowRegister={() => setShowRegisterForm(true)}
+        onShowActivationManagement={() => setShowActivationManagement(true)}
+        onLogout={handleLogout}
+      />
 
       {/* 功能介绍标题 */}
       <div className="text-center mb-10">
@@ -1141,59 +1049,10 @@ export default function Home() {
       </div>
 
       {/* Tabs */}
-      <div className="flex flex-wrap gap-4 mb-8 justify-center">
-        {tabs.map(tab => (
-          <button
-            key={tab.key}
-            className={`px-6 py-3 rounded-full font-medium border transition-all duration-200 ${activeTab === tab.key ? 'bg-primary text-white border-primary shadow-lg transform scale-105' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-gray-300'}`}
-            onClick={() => setActiveTab(tab.key)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <TabNavigation tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
       {/* 功能说明 */}
-      <div className="mb-8 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-gray-200">
-        <div className="text-center">
-          {activeTab === 'extract' && (
-            <div>
-              <h3 className="font-semibold text-gray-800 mb-2">📝 内容提炼</h3>
-              <p className="text-sm text-gray-600">从任意链接提取内容，AI智能生成小红书爆款笔记，支持预设风格模板和参考爆款内容两种模式</p>
-            </div>
-          )}
-          {activeTab === 'search' && (
-            <div>
-              <h3 className="font-semibold text-gray-800 mb-2">🔍 全网搜索</h3>
-              <p className="text-sm text-gray-600">搜索全网热门内容，覆盖Google、微信公众号、知乎、小红书等8大平台，AI自动整合生成优质笔记</p>
-            </div>
-          )}
-          {activeTab === 'rewrite' && (
-            <div>
-              <h3 className="font-semibold text-gray-800 mb-2">✏️ 笔记改写</h3>
-              <p className="text-sm text-gray-600">将现有内容智能改写为不同平台风格，支持口播短视频、小红书图文、公众号文章等多种格式</p>
-            </div>
-          )}
-          {activeTab === 'card' && (
-            <div>
-              <h3 className="font-semibold text-gray-800 mb-2">🎨 封面生成</h3>
-              <p className="text-sm text-gray-600">AI驱动的专业封面设计工具，提供8种精美风格模板，一键生成高质量封面图片</p>
-            </div>
-          )}
-          {activeTab === 'info-card' && (
-            <div>
-              <h3 className="font-semibold text-gray-800 mb-2">📚 信息卡片</h3>
-              <p className="text-sm text-gray-600">AI智能分析长文内容，自动选择最适合的模板，生成2-4张精美的信息卡片，内容分配合理，视觉呈现优雅</p>
-            </div>
-          )}
-          {activeTab === 'image' && (
-            <div>
-              <h3 className="font-semibold text-gray-800 mb-2">🖼️ 图片生成</h3>
-              <p className="text-sm text-gray-600">AI图片生成功能正在开发中，即将为您提供更多创作可能</p>
-            </div>
-          )}
-        </div>
-      </div>
+      <FeatureDescription activeTab={activeTab} />
 
       {/* 内容提炼Tab */}
       {activeTab === 'extract' && (
