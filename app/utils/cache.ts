@@ -34,7 +34,9 @@ class MemoryCache {
     // 如果缓存已满，删除最旧的项目
     if (this.cache.size >= this.maxSize) {
       const oldestKey = this.cache.keys().next().value;
-      this.cache.delete(oldestKey);
+      if (oldestKey) {
+        this.cache.delete(oldestKey);
+      }
     }
 
     this.cache.set(cacheKey, {
@@ -83,7 +85,8 @@ class MemoryCache {
     const now = Date.now();
     let cleanedCount = 0;
 
-    for (const [key, item] of this.cache.entries()) {
+    const entries = Array.from(this.cache.entries());
+    for (const [key, item] of entries) {
       if (now > item.expiry) {
         this.cache.delete(key);
         cleanedCount++;

@@ -175,7 +175,17 @@ function createFallbackResponse(content: string, platform: string): Array<{ [key
   };
 
   const base = fallbacks[platform as keyof typeof fallbacks] || fallbacks.xiaohongshu;
-  return [base, { ...base, 主标题: base.主标题 || base.核心标题 + '(备选)' }];
+  
+  // 创建备选版本，处理不同平台的属性名差异
+  const alternativeVersion = { ...base };
+  const baseAny = base as any;
+  if (baseAny.主标题) {
+    (alternativeVersion as any).主标题 = baseAny.主标题 + '(备选)';
+  } else if (baseAny.核心标题) {
+    (alternativeVersion as any).核心标题 = baseAny.核心标题 + '(备选)';
+  }
+  
+  return [base, alternativeVersion];
 }
 
 // ⚡ 处理单个优化请求
@@ -183,8 +193,8 @@ async function processOptimizeRequest(content: string, platform: string, startTi
   try {
     // ⚡ 检查缓存
     if (PERFORMANCE_CONFIG.ENABLE_CONTENT_CACHE) {
-      const cacheKey = { text: content.trim(), platform };
-      const cachedResult = cacheUtils.getOptimizeCache?.(cacheKey);
+      const cacheKey = { content: content.trim(), platform };
+      const cachedResult = cacheUtils.getOptimizationCache?.(cacheKey);
       if (cachedResult) {
         console.log('⚡ 内容优化缓存命中');
         return NextResponse.json({
@@ -256,9 +266,9 @@ async function processOptimizeRequest(content: string, platform: string, startTi
     // ⚡ 异步缓存
     if (PERFORMANCE_CONFIG.ENABLE_CONTENT_CACHE && versions.length > 0) {
       setTimeout(() => {
-        const cacheKey = { text: content.trim(), platform };
-        if (cacheUtils.setOptimizeCache) {
-          cacheUtils.setOptimizeCache(cacheKey, result);
+        const cacheKey = { content: content.trim(), platform };
+        if (cacheUtils.setOptimizationCache) {
+          cacheUtils.setOptimizationCache(cacheKey, result);
           console.log('💾 内容优化结果已缓存');
         }
       }, 0);

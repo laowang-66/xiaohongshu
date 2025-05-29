@@ -2,10 +2,21 @@
 
 import { useState } from 'react';
 
+interface MarkdownAnalysis {
+  contentType: string;
+  layoutType: string;
+  optimizedTitle: string;
+  optimizedSubtitle?: string;
+  highlights: string[];
+  layoutSuggestion: string;
+  colorScheme: string;
+  visualElements: string[];
+}
+
 export default function MarkdownDemoPage() {
   const [inputText, setInputText] = useState('');
   const [generatedHtml, setGeneratedHtml] = useState('');
-  const [markdownAnalysis, setMarkdownAnalysis] = useState(null);
+  const [markdownAnalysis, setMarkdownAnalysis] = useState<MarkdownAnalysis | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedSize, setSelectedSize] = useState('xiaohongshu');
 
@@ -325,7 +336,7 @@ export function middleware(request: NextRequest) {
                     </div>
                   )}
                   
-                  {markdownAnalysis.highlights.length > 0 && (
+                  {markdownAnalysis.highlights && markdownAnalysis.highlights.length > 0 && (
                     <div>
                       <span className="font-medium text-gray-700">重点要素：</span>
                       <div className="mt-1 flex flex-wrap gap-1">
@@ -348,7 +359,7 @@ export function middleware(request: NextRequest) {
                     <span className="text-gray-600 ml-2">{markdownAnalysis.colorScheme}</span>
                   </div>
                   
-                  {markdownAnalysis.visualElements.length > 0 && (
+                  {markdownAnalysis.visualElements && markdownAnalysis.visualElements.length > 0 && (
                     <div>
                       <span className="font-medium text-gray-700">视觉元素：</span>
                       <div className="mt-1 flex flex-wrap gap-1">

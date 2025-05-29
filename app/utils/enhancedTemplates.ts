@@ -161,7 +161,7 @@ function generatePremiumGlassMorphismPrompt(sizeConfig: any, text: string): stri
 
 传统内容分析：
 - 核心价值：${contentAnalysis.coreValue}
-- 关键词组合：${contentAnalysis.keywordPairs.join(', ')}
+- 关键词对：${contentAnalysis.keywordPairs.join(', ')}
 - 情感触发：${contentAnalysis.emotionalHooks.join(', ')}
 
 💎 玻璃质感要求：
@@ -286,7 +286,7 @@ function generateElegantSerifMagazinePrompt(sizeConfig: any, text: string): stri
 
 传统内容分析：
 - 核心价值：${contentAnalysis.coreValue}
-- 内容结构：${JSON.stringify(contentAnalysis.contentStructure)}
+- 关键词对：${contentAnalysis.keywordPairs.join(', ')}
 
 ✒️ 杂志排版标准：
 - 字体选择：serif字体体现权威感，sans-serif辅助
@@ -406,7 +406,7 @@ function generateNatureOrganicFlowPrompt(sizeConfig: any, text: string): string 
 🌿 设计理念：自然和谐 + 有机美学
 基于内容分析：
 - 核心价值：${contentAnalysis.coreValue}
-- 关键词组合：${contentAnalysis.keywordPairs.join(', ')}
+- 关键词对：${contentAnalysis.keywordPairs.join(', ')}
 
 🌊 有机流动元素：
 - 背景：自然渐变 + 有机曲线装饰
