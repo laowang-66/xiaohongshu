@@ -190,7 +190,7 @@ class XiaohongshuAPIClient {
   private client: AxiosInstance;
   private baseURL: string;
 
-  constructor(baseURL: string = 'http://localhost:3000') {
+  constructor(baseURL: string = 'http://114.215.187.208:3000') {
     this.baseURL = baseURL;
     this.client = axios.create({
       baseURL: `${baseURL}/api/v1/xiaohongshu`,
