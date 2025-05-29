@@ -8,13 +8,13 @@ import UserStatusBar from './components/UserStatusBar';
 import AuthModals from './components/AuthModals';
 import ContentExtractor from './components/ContentExtractor';
 import SearchGenerator from './components/SearchGenerator';
+import ContentRewriter from './components/ContentRewriter';
 import { TEMPLATE_COMPONENTS } from './components/InfoCardTemplates';
 import CoverGenerator from './components/CoverGenerator';
 import { ENHANCED_TEMPLATES } from './utils/enhancedTemplates';
 import { apiCall, isAuthenticated } from './lib/auth';
 import {
   tabs,
-  rewriteStyles,
   cardTemplates,
 } from './config/constants';
 
@@ -85,14 +85,6 @@ export default function Home() {
   // ==================== 原有状态管理 ====================
   const [activeTab, setActiveTab] = useState('extract');
 
-  // 改写专用
-  const [rewriteInput, setRewriteInput] = useState('');
-  const [rewriteStyle, setRewriteStyle] = useState('video');
-  const [rewriteResult, setRewriteResult] = useState('');
-  const [rewriteLoading, setRewriteLoading] = useState(false);
-  const [rewriteError, setRewriteError] = useState('');
-  const [rewriteCopied, setRewriteCopied] = useState(false);
-
   // 信息卡片专用
   const [infoCardInput, setInfoCardInput] = useState('');
   const [infoCardTemplate, setInfoCardTemplate] = useState('knowledge_summary');
@@ -100,53 +92,6 @@ export default function Home() {
   const [infoCardError, setInfoCardError] = useState('');
   const [infoCardResult, setInfoCardResult] = useState<any[]>([]);
   const [infoCardCopied, setInfoCardCopied] = useState(false);
-
-  // 改写生成
-  const handleRewrite = async () => {
-    setRewriteError('');
-    setRewriteResult('');
-    setRewriteCopied(false);
-    
-    // 检查认证和密钥
-    if (!isAuthenticated()) {
-      setRewriteError('请先登录');
-      return;
-    }
-    
-    if (!rewriteInput.trim()) {
-      setRewriteError('请输入需要改写的内容');
-      return;
-    }
-    setRewriteLoading(true);
-    try {
-      const res = await apiCall('/api/rewrite', {
-        method: 'POST',
-        body: JSON.stringify({
-          text: rewriteInput,
-          style: rewriteStyles.find(s => s.key === rewriteStyle)?.label || '',
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || data.error) {
-        setRewriteError(data.message || '改写失败，请稍后重试');
-      } else {
-        setRewriteResult(data.result);
-      }
-    } catch (e) {
-      setRewriteError(e instanceof Error ? e.message : '改写失败，请稍后重试');
-    } finally {
-      setRewriteLoading(false);
-    }
-  };
-
-  // 改写复制
-  const handleRewriteCopy = () => {
-    if (rewriteResult) {
-      navigator.clipboard.writeText(rewriteResult);
-      setRewriteCopied(true);
-      setTimeout(() => setRewriteCopied(false), 1500);
-    }
-  };
 
   // 信息卡片生成
   const handleInfoCardGenerate = async () => {
@@ -308,59 +253,7 @@ export default function Home() {
 
       {/* 笔记改写Tab */}
       {activeTab === 'rewrite' && (
-        <>
-          <div className="mb-8">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              输入需要改写的内容
-            </label>
-            <textarea
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent h-32"
-              placeholder="请输入你想改写的内容..."
-              value={rewriteInput}
-              onChange={e => setRewriteInput(e.target.value)}
-              disabled={rewriteLoading}
-            />
-          </div>
-          <div className="mb-8">
-            <label className="block text-sm font-medium text-gray-700 mb-2">选择改写风格</label>
-            <div className="flex gap-4 flex-wrap">
-              {rewriteStyles.map(style => (
-                <button
-                  key={style.key}
-                  className={`px-4 py-2 rounded border text-sm font-medium transition-colors ${rewriteStyle === style.key ? 'bg-primary text-white border-primary' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'}`}
-                  onClick={() => setRewriteStyle(style.key)}
-                  disabled={rewriteLoading}
-                >
-                  {style.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="mt-6 flex justify-center">
-            <button
-              className="w-full max-w-xl btn-primary py-4 text-lg"
-              onClick={handleRewrite}
-              disabled={rewriteLoading}
-            >
-              {rewriteLoading ? '生成中...' : '生成改写内容'}
-            </button>
-          </div>
-          {rewriteError && <div className="text-red-500 text-center mt-4">{rewriteError}</div>}
-          {rewriteResult && (
-            <div className="mt-10 max-w-2xl mx-auto bg-white rounded-xl shadow p-6 whitespace-pre-line">
-              <div className="font-bold mb-2 text-primary flex items-center justify-between">
-                改写结果
-                <button
-                  className="ml-2 px-3 py-1 text-xs rounded bg-primary text-white hover:bg-primary-dark transition-colors"
-                  onClick={handleRewriteCopy}
-                >
-                  {rewriteCopied ? '已复制' : '复制'}
-                </button>
-              </div>
-              <div>{rewriteResult}</div>
-            </div>
-          )}
-        </>
+        <ContentRewriter onShowLogin={() => setShowLoginForm(true)} />
       )}
 
       {/* 封面生成Tab */}
@@ -371,141 +264,142 @@ export default function Home() {
         />
       )}
 
-        {/* 信息卡片Tab */}
-        {activeTab === 'info-card' && (
-          <>
-            <div className="mb-8">
-              <label className="block text-sm font-medium text-gray-700 mb-2">输入信息卡片内容</label>
-              <textarea
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent h-32"
-                placeholder="请输入您想要生成信息卡片的内容..."
-                value={infoCardInput}
-                onChange={e => setInfoCardInput(e.target.value)}
-                disabled={infoCardLoading}
-              />
-              <div className="text-xs text-gray-400 mt-1">
-                系统将根据您输入的内容自动生成符合所选模板的信息卡片
-              </div>
-            </div>
-
-            <div className="mt-8 flex justify-center">
-              <button
-                className="w-full max-w-xl btn-primary py-4 text-lg font-medium"
-                onClick={handleInfoCardGenerate}
-                disabled={infoCardLoading}
-              >
-                {infoCardLoading ? (
-                  <span className="flex items-center justify-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    AI设计中...
-                  </span>
-                ) : (
-                  '🎨 生成信息卡片'
-                )}
-              </button>
-            </div>
-
-            {infoCardError && (
-              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <div className="text-red-700 text-center">
-                  <span className="font-medium">生成失败：</span>{infoCardError}
-                  </div>
-              </div>
-            )}
-
-            {infoCardResult && infoCardResult.length > 0 && (
-              <div className="mt-10 w-full max-w-6xl mx-auto">
-                <div className="bg-white rounded-xl shadow-lg p-6">
-                  <div className="font-bold mb-6 text-primary flex items-center justify-between">
-                    <span className="flex items-center">
-                      ✨ 您的信息卡片已生成 ({infoCardResult.length}张)
-                    </span>
-                    <div className="flex gap-2">
-                      <button
-                        className="px-4 py-2 text-sm rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors flex items-center gap-1"
-                        onClick={handleInfoCardCopy}
-                      >
-                        {infoCardCopied ? '✅ 已复制' : '📋 复制数据'}
-                      </button>
-                      <button
-                        className="px-4 py-2 text-sm rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors flex items-center gap-1"
-                        onClick={handleBatchDownload}
-                      >
-                        💾 批量下载所有卡片
-                      </button>
-                    </div>
-                  </div>
-                  
-                  {/* 卡片网格布局 */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 justify-items-center">
-                    {infoCardResult.map((card, index) => {
-                      const TemplateComponent = TEMPLATE_COMPONENTS[card.type as keyof typeof TEMPLATE_COMPONENTS];
-                      if (!TemplateComponent) {
-                        console.error(`Unknown template type: ${card.type}`);
-                        return null;
-                      }
-                      return (
-                        <div key={index} className="flex flex-col items-center space-y-4 w-full max-w-md">
-                          <div id={`info-card-preview-${index}`} className="w-full">
-                            <TemplateComponent data={card} />
-                          </div>
-                          <button
-                            className="px-4 py-2 text-sm rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors shadow-sm"
-                            onClick={() => handleSingleCardDownload(index)}
-                          >
-                            📥 下载第{index + 1}张卡片
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  
-                  <div className="mt-6 text-xs text-gray-500 text-center">
-                    💡 提示：点击"下载第X张卡片"可下载单张卡片，点击"批量下载所有卡片"可下载所有卡片
-                  </div>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-
-        {activeTab === 'image' && (
-          <div className="text-center py-20">
-            <div className="max-w-md mx-auto">
-              <div className="text-6xl mb-6">🚀</div>
-              <h3 className="text-2xl font-bold text-gray-800 mb-4">AI图片生成</h3>
-              <p className="text-gray-600 mb-6 leading-relaxed">
-                我们正在开发强大的AI图片生成功能，将为您提供：
-              </p>
-              <div className="text-left bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-                <ul className="space-y-3 text-sm text-gray-700">
-                  <li className="flex items-start gap-2">
-                    <span className="text-green-500 mt-0.5">✓</span>
-                    <span>文字转图片生成</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-green-500 mt-0.5">✓</span>
-                    <span>小红书风格配图</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-green-500 mt-0.5">✓</span>
-                    <span>多种艺术风格选择</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-green-500 mt-0.5">✓</span>
-                    <span>高清图片输出</span>
-                  </li>
-                </ul>
-              </div>
-              <p className="text-gray-500 text-sm mt-6">
-                🎉 即将上线，敬请期待！
-              </p>
+      {/* 信息卡片Tab */}
+      {activeTab === 'info-card' && (
+        <>
+          <div className="mb-8">
+            <label className="block text-sm font-medium text-gray-700 mb-2">输入信息卡片内容</label>
+            <textarea
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent h-32"
+              placeholder="请输入您想要生成信息卡片的内容..."
+              value={infoCardInput}
+              onChange={e => setInfoCardInput(e.target.value)}
+              disabled={infoCardLoading}
+            />
+            <div className="text-xs text-gray-400 mt-1">
+              系统将根据您输入的内容自动生成符合所选模板的信息卡片
             </div>
           </div>
-        )}
+
+          <div className="mt-8 flex justify-center">
+            <button
+              className="w-full max-w-xl btn-primary py-4 text-lg font-medium"
+              onClick={handleInfoCardGenerate}
+              disabled={infoCardLoading}
+            >
+              {infoCardLoading ? (
+                <span className="flex items-center justify-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  AI设计中...
+                </span>
+              ) : (
+                '🎨 生成信息卡片'
+              )}
+            </button>
+          </div>
+
+          {infoCardError && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="text-red-700 text-center">
+                <span className="font-medium">生成失败：</span>{infoCardError}
+                </div>
+            </div>
+          )}
+
+          {infoCardResult && infoCardResult.length > 0 && (
+            <div className="mt-10 w-full max-w-6xl mx-auto">
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <div className="font-bold mb-6 text-primary flex items-center justify-between">
+                  <span className="flex items-center">
+                    ✨ 您的信息卡片已生成 ({infoCardResult.length}张)
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      className="px-4 py-2 text-sm rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors flex items-center gap-1"
+                      onClick={handleInfoCardCopy}
+                    >
+                      {infoCardCopied ? '✅ 已复制' : '📋 复制数据'}
+                    </button>
+                    <button
+                      className="px-4 py-2 text-sm rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors flex items-center gap-1"
+                      onClick={handleBatchDownload}
+                    >
+                      💾 批量下载所有卡片
+                    </button>
+                  </div>
+                </div>
+                
+                {/* 卡片网格布局 */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 justify-items-center">
+                  {infoCardResult.map((card, index) => {
+                    const TemplateComponent = TEMPLATE_COMPONENTS[card.type as keyof typeof TEMPLATE_COMPONENTS];
+                    if (!TemplateComponent) {
+                      console.error(`Unknown template type: ${card.type}`);
+                      return null;
+                    }
+                    return (
+                      <div key={index} className="flex flex-col items-center space-y-4 w-full max-w-md">
+                        <div id={`info-card-preview-${index}`} className="w-full">
+                          <TemplateComponent data={card} />
+                        </div>
+                        <button
+                          className="px-4 py-2 text-sm rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors shadow-sm"
+                          onClick={() => handleSingleCardDownload(index)}
+                        >
+                          📥 下载第{index + 1}张卡片
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                <div className="mt-6 text-xs text-gray-500 text-center">
+                  💡 提示：点击"下载第X张卡片"可下载单张卡片，点击"批量下载所有卡片"可下载所有卡片
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* AI图片生成Tab */}
+      {activeTab === 'image' && (
+        <div className="text-center py-20">
+          <div className="max-w-md mx-auto">
+            <div className="text-6xl mb-6">🚀</div>
+            <h3 className="text-2xl font-bold text-gray-800 mb-4">AI图片生成</h3>
+            <p className="text-gray-600 mb-6 leading-relaxed">
+              我们正在开发强大的AI图片生成功能，将为您提供：
+            </p>
+            <div className="text-left bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+              <ul className="space-y-3 text-sm text-gray-700">
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500 mt-0.5">✓</span>
+                  <span>文字转图片生成</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500 mt-0.5">✓</span>
+                  <span>小红书风格配图</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500 mt-0.5">✓</span>
+                  <span>多种艺术风格选择</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500 mt-0.5">✓</span>
+                  <span>高清图片输出</span>
+                </li>
+              </ul>
+            </div>
+            <p className="text-gray-500 text-sm mt-6">
+              🎉 即将上线，敬请期待！
+            </p>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
