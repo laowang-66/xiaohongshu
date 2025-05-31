@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>长文内容优化测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f7fa;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .platform-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+        
+        .platform-btn {
+            padding: 8px 20px;
+            border: 2px solid #e0e6ed;
+            background: white;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .platform-btn.active {
+            background: #4CAF50;
+            color: white;
+            border-color: #4CAF50;
+        }
+        
+        .input-section {
+            margin-bottom: 30px;
+        }
+        
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 15px;
+            border: 2px solid #e0e6ed;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: vertical;
+            font-family: inherit;
+        }
+        
+        .char-count {
+            text-align: right;
+            margin-top: 5px;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+        
+        button {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: #2196F3;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #1976D2;
+            transform: translateY(-2px);
+        }
+        
+        .btn-test {
+            background: #FF9800;
+            color: white;
+        }
+        
+        .btn-test:hover {
+            background: #F57C00;
+            transform: translateY(-2px);
+        }
+        
+        .results {
+            margin-top: 30px;
+        }
+        
+        .result-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .version-title {
+            font-weight: 600;
+            color: #4CAF50;
+            font-size: 16px;
+        }
+        
+        .method-badge {
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .method-api {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .method-local {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+        
+        .field-group {
+            display: grid;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .field {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .field-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 3px;
+        }
+        
+        .field-value {
+            font-size: 14px;
+            color: #333;
+            padding: 8px 12px;
+            background: white;
+            border: 1px solid #e0e6ed;
+            border-radius: 4px;
+        }
+        
+        .status {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .status.loading {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .status.success {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+        
+        .status.error {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .debug-info {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 15px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .sample-texts {
+            margin-bottom: 20px;
+        }
+        
+        .sample-btn {
+            display: inline-block;
+            padding: 5px 12px;
+            margin: 5px 5px 5px 0;
+            background: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.3s;
+        }
+        
+        .sample-btn:hover {
+            background: #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 长文内容优化测试工具</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 30px;">
+            测试长文内容提炼优化功能，支持小红书、短视频、公众号三个平台
+        </p>
+        
+        <div class="platform-selector">
+            <button class="platform-btn active" data-platform="xiaohongshu">📱 小红书</button>
+            <button class="platform-btn" data-platform="video">🎥 短视频</button>
+            <button class="platform-btn" data-platform="wechat">📰 公众号</button>
+        </div>
+        
+        <div class="sample-texts">
+            <label>快速填入测试内容：</label>
+            <div>
+                <button class="sample-btn" data-sample="coffee">咖啡教程 (673字)</button>
+                <button class="sample-btn" data-sample="programming">编程学习 (892字)</button>
+                <button class="sample-btn" data-sample="travel">旅行攻略 (1156字)</button>
+                <button class="sample-btn" data-sample="fitness">健身指南 (784字)</button>
+            </div>
+        </div>
+        
+        <div class="input-section">
+            <label for="content">输入长文内容：</label>
+            <textarea id="content" placeholder="在这里粘贴或输入你的长文内容..."></textarea>
+            <div class="char-count">
+                字符数：<span id="charCount">0</span>
+            </div>
+        </div>
+        
+        <div class="buttons">
+            <button class="btn-primary" onclick="testOptimization()">🚀 测试优化</button>
+            <button class="btn-secondary" onclick="testAPI()">📡 测试API</button>
+            <button class="btn-test" onclick="loadTestContent()">🧪 自动测试</button>
+        </div>
+        
+        <div id="status"></div>
+        <div id="results" class="results"></div>
+    </div>
+
+    <script>
+        let selectedPlatform = 'xiaohongshu';
+        
+        // 示例长文内容
+        const sampleTexts = {
+            coffee: `今天给大家分享一个超级实用的生活小技巧，关于如何在家制作咖啡的详细教程。
+
+很多朋友都喜欢喝咖啡，但是外面买的咖啡不仅价格昂贵，而且口味也不一定符合自己的喜好。其实在家制作咖啡非常简单，只需要掌握几个关键要点就可以了。
+
+首先，选择合适的咖啡豆非常重要。建议选择新鲜烘焙的咖啡豆，最好是在烘焙后的2-4周内使用。咖啡豆的研磨粗细也会影响口感，一般来说，手冲咖啡适合中细度研磨。
+
+其次，水温的控制也是关键因素。理想的水温应该在90-96度之间，过热的水会让咖啡变苦，过冷的水则无法充分提取咖啡的香味。
+
+接下来是冲泡时间的掌握。不同的冲泡方法需要不同的时间，手冲咖啡一般需要2-4分钟，而法压壶则需要4分钟左右。
+
+最后，咖啡和水的比例也很重要，一般推荐1:15到1:17的比例，也就是1克咖啡粉对应15-17毫升水。
+
+掌握了这些技巧，你就可以在家制作出媲美咖啡店的美味咖啡了。不仅省钱，还能根据自己的喜好调整口味。`,
+
+            programming: `零基础学编程！30天从小白到大神的逆袭之路
+
+很多人觉得编程很难，但其实只要方法对了，30天就能掌握基础。我自己就是从完全不懂代码到现在能独立开发项目，整个过程用了不到一个月。
+
+第一周：基础语法学习
+选择Python作为入门语言，因为它语法简单，容易理解。每天花2-3小时学习变量、循环、函数等基本概念。推荐使用在线编程平台练习，比如LeetCode或者廖雪峰的教程。
+
+第二周：项目实践
+开始做一些小项目，比如计算器、猜数字游戏等。这个阶段最重要的是动手写代码，不要只看不练。遇到问题就Google搜索，学会看官方文档。
+
+第三周：进阶学习
+学习面向对象编程、文件操作、网络编程等进阶内容。可以尝试做一个简单的爬虫或者网站。这时候要开始关注代码的规范性和可读性。
+
+第四周：项目完善
+选择一个稍微复杂的项目，比如个人博客系统或者数据分析工具。在这个过程中会遇到很多实际问题，正好锻炼解决问题的能力。
+
+关键是要坚持每天练习，不要三天打鱼两天晒网。编程是一个需要大量练习的技能，只有通过不断的编码才能真正掌握。`,
+
+            travel: `日本关西5日游完全攻略：大阪京都奈良深度体验，人均3000元玩转古都
+
+作为一个去过日本十几次的旅行博主，这次给大家分享关西地区的深度游攻略。关西包括大阪、京都、奈良等城市，是体验日本传统文化的最佳地区。
+
+第一天：大阪初体验
+从关西国际机场到大阪市区，推荐买关西机场快线票。第一站建议去大阪城，了解日本历史文化。下午可以去道顿堀，体验大阪的美食文化，章鱼烧、大阪烧都是必尝美食。
+
+第二天：京都古韵
+早上乘坐阪急电车到京都，先去清水寺感受古建筑的魅力。下午走访二年坂、三年坂的传统街道，可以租一套和服拍照留念。傍晚去祗园看艺妓表演。
+
+第三天：奈良萌鹿
+一日游奈良，重点是奈良公园的小鹿和东大寺的大佛。小鹿很温顺，可以买鹿饼干喂食。春日大社的千鸟居也是必打卡景点。
+
+第四天：京都深度游
+上午去金阁寺，这是京都最著名的景点之一。下午可以选择岩山竹林或者伏见稻荷大社。岩山竹林适合拍照，伏见稻荷适合爬山锻炼。
+
+第五天：大阪购物
+最后一天主要是购物和品尝美食。心斋桥是购物天堂，从奢侈品到平价商品都有。黑门市场可以品尝各种新鲜海鲜。
+
+预算分析：
+机票往返：1200元
+住宿五晚：800元（青旅或商务酒店）
+交通费：400元（包括JR PASS）
+餐饮：500元
+门票：100元
+总计约3000元，是性价比很高的旅行方案。
+
+小贴士：提前下载谷歌翻译和换乘案内APP，日语不好也能轻松出行。记得带现金，很多地方不支持刷卡。`,
+
+            fitness: `健身小白必看！90天从虚弱到健壮的完整训练计划
+
+很多人想开始健身，但不知道从何下手。我作为一个从120斤瘦猴到现在160斤肌肉男的过来人，分享一套完整的90天训练计划。
+
+前30天：基础适应期
+这个阶段主要是让身体适应运动强度。每周3次全身性训练，每次45分钟。重点练习深蹲、俯卧撑、引体向上等复合动作。不要急于增加重量，先把动作做标准。
+
+饮食方面，增加蛋白质摄入，每公斤体重摄入1.2-1.5克蛋白质。多吃鸡胸肉、鸡蛋、牛奶等高蛋白食物。
+
+第31-60天：力量提升期
+开始按部位分化训练。周一练胸和三头肌，周二练背和二头肌，周三练腿，周四练肩，周五练手臂。每个部位每周练习2次。
+
+这个阶段要逐渐增加训练重量，遵循渐进式超负荷原则。重量选择以能完成8-12次为宜，最后几次要有明显的力竭感。
+
+第61-90天：塑形强化期
+这个阶段身体已经有了明显变化，要开始注重肌肉的细节雕刻。增加一些孤立性动作，比如哑铃飞鸟、集中弯举等。
+
+有氧运动也要跟上，每周3次，每次30分钟。可以选择跑步、游泳、骑行等。有氧能帮助降低体脂率，让肌肉线条更明显。
+
+营养补充：除了正常饮食，可以适当补充乳清蛋白粉和肌酸。乳清蛋白在训练后30分钟内摄入效果最好。
+
+注意事项：充足的睡眠很重要，肌肉是在休息时生长的。每晚保证7-8小时睡眠。如果感到疲劳，不要硬撑，适当休息一天。
+
+坚持这个计划90天，你会发现自己的身材有翻天覆地的变化。记住，健身是一个长期过程，不要期望一夜就有明显效果。`
+        };
+        
+        // 平台选择
+        document.querySelectorAll('.platform-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.platform-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                selectedPlatform = this.dataset.platform;
+            });
+        });
+        
+        // 示例文本填入
+        document.querySelectorAll('.sample-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const sampleKey = this.dataset.sample;
+                document.getElementById('content').value = sampleTexts[sampleKey];
+                updateCharCount();
+            });
+        });
+        
+        // 字符计数
+        function updateCharCount() {
+            const content = document.getElementById('content').value;
+            document.getElementById('charCount').textContent = content.length;
+        }
+        
+        document.getElementById('content').addEventListener('input', updateCharCount);
+        
+        // 显示状态
+        function showStatus(message, type = 'loading') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+        
+        // 显示结果
+        function showResults(result) {
+            const resultsDiv = document.getElementById('results');
+            
+            if (!result || !result.versions) {
+                resultsDiv.innerHTML = '<div class="status error">❌ 优化失败或无结果</div>';
+                return;
+            }
+            
+            let html = `<h3>优化结果 (${result.versions.length} 个版本)</h3>`;
+            
+            result.versions.forEach((version, index) => {
+                html += `
+                    <div class="result-card">
+                        <div class="result-header">
+                            <div class="version-title">版本 ${index + 1}</div>
+                            <div class="method-badge ${result.method === 'local' ? 'method-local' : 'method-api'}">
+                                ${result.method === 'local' ? '🔧 本地处理' : '🌐 API处理'}
+                                ${result.fallback ? ' (降级)' : ''}
+                            </div>
+                        </div>
+                        <div class="field-group">
+                            ${Object.entries(version).map(([key, value]) => `
+                                <div class="field">
+                                    <div class="field-label">${key}</div>
+                                    <div class="field-value">${value}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            if (result.debug) {
+                html += `
+                    <div class="debug-info">
+                        <strong>调试信息:</strong><br>
+                        ${Object.entries(result.debug).map(([key, value]) => 
+                            `${key}: ${value}`
+                        ).join('<br>')}
+                    </div>
+                `;
+            }
+            
+            resultsDiv.innerHTML = html;
+        }
+        
+        // 测试优化功能
+        async function testOptimization() {
+            const content = document.getElementById('content').value.trim();
+            
+            if (!content) {
+                showStatus('❌ 请输入内容', 'error');
+                return;
+            }
+            
+            if (content.length < 50) {
+                showStatus('⚠️ 内容太短，建议至少输入50字符', 'error');
+                return;
+            }
+            
+            showStatus('🚀 正在使用修复版本进行内容优化...', 'loading');
+            
+            try {
+                // 加载修复脚本
+                if (!window.fixLongContentOptimization) {
+                    const script = document.createElement('script');
+                    script.src = '/long-content-fix.js';
+                    document.head.appendChild(script);
+                    
+                    await new Promise(resolve => {
+                        script.onload = resolve;
+                        setTimeout(resolve, 2000); // 超时保护
+                    });
+                }
+                
+                if (window.fixLongContentOptimization) {
+                    const result = await window.fixLongContentOptimization(content, selectedPlatform);
+                    
+                    if (result && result.success) {
+                        showStatus('✅ 优化成功！', 'success');
+                        showResults(result);
+                    } else {
+                        showStatus('❌ 优化失败', 'error');
+                    }
+                } else {
+                    throw new Error('修复脚本加载失败');
+                }
+                
+            } catch (error) {
+                console.error('测试失败:', error);
+                showStatus(`❌ 测试失败: ${error.message}`, 'error');
+            }
+        }
+        
+        // 测试API接口
+        async function testAPI() {
+            const content = document.getElementById('content').value.trim();
+            
+            if (!content) {
+                showStatus('❌ 请输入内容', 'error');
+                return;
+            }
+            
+            showStatus('📡 正在测试API接口...', 'loading');
+            
+            try {
+                const response = await fetch('/api/optimize-content', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        content: content,
+                        platform: selectedPlatform
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showStatus('✅ API测试成功！', 'success');
+                    showResults(result);
+                } else {
+                    showStatus(`❌ API测试失败: ${result.error}`, 'error');
+                }
+                
+            } catch (error) {
+                console.error('API测试失败:', error);
+                showStatus(`❌ API测试失败: ${error.message}`, 'error');
+            }
+        }
+        
+        // 自动测试
+        async function loadTestContent() {
+            // 随机选择一个示例
+            const samples = Object.keys(sampleTexts);
+            const randomSample = samples[Math.floor(Math.random() * samples.length)];
+            
+            document.getElementById('content').value = sampleTexts[randomSample];
+            updateCharCount();
+            
+            showStatus('🧪 已加载测试内容，开始自动测试...', 'loading');
+            
+            setTimeout(testOptimization, 1000);
+        }
+        
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCharCount();
+            showStatus('✅ 测试工具已就绪，请输入内容开始测试', 'success');
+        });
+    </script>
+</body>
+</html> 

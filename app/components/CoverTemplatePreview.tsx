@@ -3,84 +3,680 @@ import React from 'react';
 interface CoverTemplatePreviewProps {
   templateKey: string;
   isSelected: boolean;
+  platform?: string; // 新增：适配不同平台
 }
 
-const CoverTemplatePreview: React.FC<CoverTemplatePreviewProps> = ({ templateKey, isSelected }) => {
+const CoverTemplatePreview: React.FC<CoverTemplatePreviewProps> = ({ 
+  templateKey, 
+  isSelected, 
+  platform = 'xiaohongshu' 
+}) => {
+  
+  // 根据平台调整预览尺寸比例
+  const getPlatformStyle = () => {
+    const baseWidth = 135;
+    let height = 180;
+    
+    switch (platform) {
+      case 'xiaohongshu':
+        height = 180; // 3:4 比例
+        break;
+      case 'video':
+        height = 240; // 9:16 比例
+        break;
+      case 'wechat':
+        height = 40; // 3.35:1 比例
+        break;
+    }
+    
+    return {
+      width: `${baseWidth}px`,
+      height: `${height}px`,
+      aspectRatio: platform === 'xiaohongshu' ? '3/4' : 
+                   platform === 'video' ? '9/16' : 
+                   platform === 'wechat' ? '3.35/1' : '3/4'
+    };
+  };
+
+  const getFontSizes = () => {
+    switch (platform) {
+      case 'xiaohongshu':
+        return {
+          title: '10px',
+          subtitle: '7px',
+          body: '6px'
+        };
+      case 'video':
+        return {
+          title: '12px',
+          subtitle: '8px',
+          body: '7px'
+        };
+      case 'wechat':
+        return {
+          title: '8px',
+          subtitle: '6px',
+          body: '5px'
+        };
+      default:
+        return {
+          title: '10px',
+          subtitle: '7px',
+          body: '6px'
+        };
+    }
+  };
+
+  // 🎨 字符间距配置 - 根据平台优化
+  const getTextSpacing = () => {
+    switch (platform) {
+      case 'xiaohongshu':
+        return {
+          letterSpacing: '0.05em',  // 小红书：适中间距
+          wordSpacing: '0.1em',
+          lineHeight: '1.4'
+        };
+      case 'video':
+        return {
+          letterSpacing: '0.08em',  // 短视频：较大间距，提升可读性
+          wordSpacing: '0.15em',
+          lineHeight: '1.3'
+        };
+      case 'wechat':
+        return {
+          letterSpacing: '0.06em',  // 公众号：平衡间距
+          wordSpacing: '0.12em',
+          lineHeight: '1.5'
+        };
+      default:
+        return {
+          letterSpacing: '0.05em',
+          wordSpacing: '0.1em',
+          lineHeight: '1.4'
+        };
+    }
+  };
+
   const getPreviewContent = () => {
+    const platformStyle = getPlatformStyle();
     const baseStyle = {
-      width: '135px',
-      height: '180px',
+      ...platformStyle,
       borderRadius: '8px',
       overflow: 'hidden',
-      fontSize: '8px',
+      fontSize: platform === 'wechat' ? '6px' : '8px',
       fontFamily: '"PingFang SC", "Microsoft YaHei", sans-serif',
       position: 'relative' as const,
-      cursor: 'pointer'
+      cursor: 'pointer',
+      boxSizing: 'border-box' as const
     };
 
+    const fonts = getFontSizes();
+    const spacing = getTextSpacing(); // 新增：获取间距配置
+
     switch (templateKey) {
+      // ============= 增强模板预览（适配不同平台） =============
+      
+      case 'soft_tech_card':
+        return (
+          <div style={{
+            ...baseStyle,
+            background: 'linear-gradient(135deg, #f8f4ff 0%, #e8d5ff 100%)',
+            padding: platform === 'wechat' ? '6px' : '12px',
+            color: '#6b46c1',
+            display: 'flex',
+            flexDirection: platform === 'wechat' ? 'row' : 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            borderRadius: '12px',
+            boxShadow: '0 2px 12px rgba(107, 70, 193, 0.15)',
+            border: '1px solid rgba(232, 213, 255, 0.3)'
+          }}>
+            <div style={{ flex: platform === 'wechat' ? 1 : 'none', textAlign: 'center' }}>
+              <div style={{ 
+                fontSize: fonts.title, 
+                fontWeight: 'bold', 
+                marginBottom: platform === 'wechat' ? '1px' : '4px',
+                letterSpacing: spacing.letterSpacing,
+                wordSpacing: spacing.wordSpacing
+              }}>
+                💜 柔和科技
+              </div>
+              <div style={{ 
+                fontSize: fonts.subtitle, 
+                color: '#8b5cf6',
+                lineHeight: spacing.lineHeight,
+                opacity: 0.9,
+                letterSpacing: spacing.letterSpacing,
+                wordSpacing: spacing.wordSpacing
+              }}>
+                圆角卡片 · 轻柔色彩
+                {platform !== 'wechat' && <><br/>友好亲和 · 科技感</>}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'modern_business_news':
+        return (
+          <div style={{
+            ...baseStyle,
+            background: 'linear-gradient(135deg, #2d5a27 0%, #8b1538 100%)',
+            padding: platform === 'wechat' ? '6px' : '10px',
+            color: '#ffffff',
+            display: 'flex',
+            flexDirection: platform === 'wechat' ? 'row' : 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            position: 'relative'
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(255,255,255,0.03) 8px, rgba(255,255,255,0.03) 16px)',
+              pointerEvents: 'none'
+            }}></div>
+            <div style={{
+              position: 'absolute',
+              top: platform === 'wechat' ? '4px' : '6px',
+              right: platform === 'wechat' ? '4px' : '6px',
+              width: platform === 'wechat' ? '6px' : '12px',
+              height: platform === 'wechat' ? '6px' : '12px',
+              background: 'rgba(255,255,255,0.2)',
+              borderRadius: '2px'
+            }}></div>
+            <div style={{ flex: platform === 'wechat' ? 1 : 'none', textAlign: 'center', position: 'relative', zIndex: 1 }}>
+              <div style={{ 
+                fontSize: fonts.title, 
+                fontWeight: 'bold', 
+                marginBottom: platform === 'wechat' ? '1px' : '4px',
+                letterSpacing: spacing.letterSpacing,
+                wordSpacing: spacing.wordSpacing
+              }}>
+                📊 商务资讯
+              </div>
+              <div style={{ 
+                fontSize: fonts.subtitle, 
+                opacity: 0.9,
+                lineHeight: spacing.lineHeight,
+                letterSpacing: spacing.letterSpacing,
+                wordSpacing: spacing.wordSpacing
+              }}>
+                专业权威 · 网格底纹
+                {platform !== 'wechat' && <><br/>商务应用 · 金融科技</>}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'flowing_tech_blue_style':
+        return (
+          <div style={{
+            ...baseStyle,
+            background: 'linear-gradient(135deg, #4682b4 0%, #87ceeb 50%, #f0f8ff 100%)',
+            padding: platform === 'wechat' ? '6px' : '10px',
+            color: '#1e40af',
+            display: 'flex',
+            flexDirection: platform === 'wechat' ? 'row' : 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            position: 'relative',
+            borderRadius: '10px'
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: platform === 'wechat' ? '4px' : '8px',
+              right: platform === 'wechat' ? '4px' : '8px',
+              width: platform === 'wechat' ? '10px' : '20px',
+              height: platform === 'wechat' ? '10px' : '20px',
+              background: 'rgba(30, 64, 175, 0.1)',
+              borderRadius: '50%',
+              border: '1px solid rgba(30, 64, 175, 0.2)'
+            }}></div>
+            <div style={{ flex: platform === 'wechat' ? 1 : 'none', textAlign: 'center' }}>
+              <div style={{ 
+                fontSize: fonts.title, 
+                fontWeight: 'bold', 
+                marginBottom: platform === 'wechat' ? '2px' : '4px'
+              }}>
+                🌊 流动科技
+              </div>
+              <div style={{ 
+                fontSize: fonts.subtitle, 
+                color: '#3b82f6',
+                lineHeight: spacing.lineHeight,
+                letterSpacing: spacing.letterSpacing,
+                wordSpacing: spacing.wordSpacing
+              }}>
+                蓝白渐变 · 流线曲线
+                {platform !== 'wechat' && <><br/>现代简约 · 科技未来</>}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'minimal_grid_master':
+        return (
+          <div style={{
+            ...baseStyle,
+            background: '#000000',
+            padding: platform === 'wechat' ? '6px' : '10px',
+            color: '#ffffff',
+            display: 'flex',
+            flexDirection: platform === 'wechat' ? 'row' : 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            position: 'relative',
+            border: '1px solid #333333'
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: platform === 'wechat' ? '4px' : '8px',
+              left: platform === 'wechat' ? '4px' : '8px',
+              width: platform === 'wechat' ? '6px' : '12px',
+              height: platform === 'wechat' ? '6px' : '12px',
+              background: '#00ff00',
+              transform: 'rotate(45deg)'
+            }}></div>
+            <div style={{ flex: platform === 'wechat' ? 1 : 'none', textAlign: 'center' }}>
+              <div style={{ 
+                fontSize: fonts.title, 
+                fontWeight: 'bold', 
+                marginBottom: platform === 'wechat' ? '2px' : '6px'
+              }}>
+                ⬛ 极简格栅
+              </div>
+              <div style={{ 
+                fontSize: fonts.subtitle, 
+                color: '#cccccc',
+                lineHeight: spacing.lineHeight
+              }}>
+                黑白对比 · 几何美学
+                {platform !== 'wechat' && <><br/>网格系统 · 工业感</>}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'digital_ticket_style':
+        return (
+          <div style={{
+            ...baseStyle,
+            background: '#ffffff',
+            padding: platform === 'wechat' ? '6px' : '10px',
+            color: '#000000',
+            display: 'flex',
+            flexDirection: platform === 'wechat' ? 'row' : 'column',
+            justifyContent: 'space-between',
+            alignItems: platform === 'wechat' ? 'center' : 'stretch',
+            border: '1px solid #000000',
+            position: 'relative',
+            borderRadius: '4px'
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: platform === 'wechat' ? '3px' : '6px',
+              right: platform === 'wechat' ? '3px' : '6px',
+              width: platform === 'wechat' ? '3px' : '6px',
+              height: platform === 'wechat' ? '3px' : '6px',
+              background: '#000000',
+              borderRadius: '1px'
+            }}></div>
+            <div style={{ flex: platform === 'wechat' ? 1 : 'none' }}>
+              <div style={{ 
+                fontSize: fonts.title, 
+                fontWeight: 'bold', 
+                marginBottom: platform === 'wechat' ? '1px' : '4px'
+              }}>
+                🎫 数字票券
+              </div>
+              <div style={{ 
+                fontSize: fonts.subtitle, 
+                color: '#666666',
+                lineHeight: spacing.lineHeight
+              }}>
+                黑白对比 · 票券布局
+                {platform !== 'wechat' && <><br/>几何分区 · 留白艺术</>}
+              </div>
+            </div>
+            {platform !== 'wechat' && (
+              <div style={{
+                fontSize: fonts.body,
+                color: '#000000',
+                background: 'transparent',
+                border: '1px solid #000000',
+                padding: '2px 6px',
+                alignSelf: 'flex-end',
+                fontFamily: 'monospace'
+              }}>
+                ENTRY
+              </div>
+            )}
+          </div>
+        );
+
+      case 'constructivist_teaching':
+        return (
+          <div style={{
+            ...baseStyle,
+            background: 'linear-gradient(135deg, #000000 0%, #333333 100%)',
+            padding: platform === 'wechat' ? '6px' : '10px',
+            color: '#ffffff',
+            display: 'flex',
+            flexDirection: platform === 'wechat' ? 'row' : 'column',
+            justifyContent: 'space-between',
+            alignItems: platform === 'wechat' ? 'center' : 'stretch',
+            position: 'relative',
+            border: '2px solid #ff0000'
+          }}>
+            {platform !== 'wechat' && (
+              <div style={{
+                position: 'absolute',
+                top: '20%',
+                left: '25%',
+                width: '30px',
+                height: '2px',
+                background: '#ff0000',
+                transform: 'rotate(90deg)'
+              }}></div>
+            )}
+            {platform !== 'wechat' && (
+              <div style={{
+                position: 'absolute',
+                bottom: '15%',
+                right: '20%',
+                width: '20px',
+                height: '2px',
+                background: '#ff0000'
+              }}></div>
+            )}
+            <div style={{ flex: platform === 'wechat' ? 1 : 'none', position: 'relative', zIndex: 1 }}>
+              <div style={{ 
+                fontSize: fonts.title, 
+                fontWeight: 'bold',
+                marginBottom: platform === 'wechat' ? '1px' : '4px',
+                color: '#ffffff'
+              }}>
+                🎓 构成主义
+              </div>
+              <div style={{ 
+                fontSize: fonts.subtitle, 
+                color: '#ff0000',
+                lineHeight: spacing.lineHeight,
+                fontWeight: 'normal'
+              }}>
+                学术实验美学
+                {platform !== 'wechat' && <><br/>黑红白三色系统</>}
+              </div>
+            </div>
+            {platform !== 'wechat' && (
+              <div style={{
+                fontSize: fonts.body,
+                color: '#ffffff',
+                background: '#ff0000',
+                padding: '2px 4px',
+                alignSelf: 'flex-end'
+              }}>
+                实验
+              </div>
+            )}
+          </div>
+        );
+
+      case 'luxury_natural_mood':
+        return (
+          <div style={{
+            ...baseStyle,
+            background: 'linear-gradient(135deg, #2f4f4f 0%, #8fbc8f 50%, #f5f5dc 100%)',
+            padding: platform === 'wechat' ? '6px' : '12px',
+            color: '#f5f5dc',
+            display: 'flex',
+            flexDirection: platform === 'wechat' ? 'row' : 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            position: 'relative',
+            borderRadius: '8px'
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'radial-gradient(circle at 70% 30%, rgba(218, 165, 32, 0.1) 0%, transparent 50%)',
+              borderRadius: '8px',
+              pointerEvents: 'none'
+            }}></div>
+            <div style={{
+              position: 'absolute',
+              top: platform === 'wechat' ? '5px' : '10px',
+              right: platform === 'wechat' ? '5px' : '10px',
+              fontSize: platform === 'wechat' ? '6px' : '8px',
+              opacity: 0.7
+            }}>✨</div>
+            <div style={{ flex: platform === 'wechat' ? 1 : 'none', textAlign: 'center', position: 'relative', zIndex: 1 }}>
+              <div style={{ 
+                fontSize: fonts.title, 
+                fontWeight: 'bold', 
+                marginBottom: platform === 'wechat' ? '1px' : '4px',
+                color: '#daa520'
+              }}>
+                🍃 奢华意境
+              </div>
+              <div style={{ 
+                fontSize: fonts.subtitle, 
+                color: '#f5f5dc',
+                lineHeight: spacing.lineHeight,
+                opacity: 0.9
+              }}>
+                沉稳色调 · 意境呈现
+                {platform !== 'wechat' && <><br/>东方美学 · 品质追求</>}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'industrial_rebellion_style':
+        return (
+          <div style={{
+            ...baseStyle,
+            background: '#000000',
+            padding: platform === 'wechat' ? '6px' : '10px',
+            color: '#ffffff',
+            display: 'flex',
+            flexDirection: platform === 'wechat' ? 'row' : 'column',
+            justifyContent: 'center',
+            alignItems: platform === 'wechat' ? 'center' : 'stretch',
+            position: 'relative'
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: platform === 'wechat' ? '3px' : '6px',
+              right: platform === 'wechat' ? '3px' : '6px',
+              width: platform === 'wechat' ? '6px' : '12px',
+              height: platform === 'wechat' ? '6px' : '12px',
+              border: '1px solid #ffff00',
+              transform: 'rotate(45deg)'
+            }}></div>
+            <div style={{ flex: platform === 'wechat' ? 1 : 'none' }}>
+              <div style={{ 
+                fontSize: fonts.title, 
+                fontWeight: 'bold', 
+                marginBottom: platform === 'wechat' ? '1px' : '4px',
+                color: '#ffff00'
+              }}>
+                ⚡ 工业反叛
+              </div>
+              <div style={{ 
+                fontSize: fonts.subtitle, 
+                color: '#ff0080',
+                lineHeight: spacing.lineHeight
+              }}>
+                强对比美学 · 地下文化
+                {platform !== 'wechat' && <><br/>解构主义 · 朋克精神</>}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'cute_knowledge_card':
+        return (
+          <div style={{
+            ...baseStyle,
+            background: 'linear-gradient(135deg, #ffb6c1 0%, #fffacd 100%)',
+            padding: platform === 'wechat' ? '6px' : '12px',
+            color: '#d1477a',
+            display: 'flex',
+            flexDirection: platform === 'wechat' ? 'row' : 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            borderRadius: '15px',
+            boxShadow: '0 2px 8px rgba(255, 182, 193, 0.3)'
+          }}>
+            <div style={{ 
+              fontSize: platform === 'wechat' ? '8px' : '12px', 
+              marginBottom: platform === 'wechat' ? '0' : '4px',
+              marginRight: platform === 'wechat' ? '4px' : '0'
+            }}>😊</div>
+            <div style={{ flex: platform === 'wechat' ? 1 : 'none', textAlign: 'center' }}>
+              <div style={{ 
+                fontSize: fonts.title, 
+                fontWeight: 'bold', 
+                marginBottom: platform === 'wechat' ? '1px' : '3px'
+              }}>
+                💖 软萌知识
+              </div>
+              <div style={{ 
+                fontSize: fonts.subtitle, 
+                color: '#ec4899',
+                lineHeight: spacing.lineHeight
+              }}>
+                柔和色彩 · 圆角设计
+                {platform !== 'wechat' && <><br/>温暖治愈 · Q版可爱</>}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'business_simple_clean':
+        return (
+          <div style={{
+            ...baseStyle,
+            background: '#f5f5f5',
+            padding: platform === 'wechat' ? '6px' : '10px',
+            color: '#2c3e50',
+            display: 'flex',
+            flexDirection: platform === 'wechat' ? 'row' : 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            border: '1px solid #e0e0e0',
+            borderRadius: '6px'
+          }}>
+            <div style={{
+              width: platform === 'wechat' ? '12px' : '25px',
+              height: platform === 'wechat' ? '1px' : '2px',
+              background: '#27ae60',
+              marginBottom: platform === 'wechat' ? '0' : '6px',
+              marginRight: platform === 'wechat' ? '6px' : '0',
+              borderRadius: '1px'
+            }}></div>
+            <div style={{ flex: platform === 'wechat' ? 1 : 'none', textAlign: 'center' }}>
+              <div style={{ 
+                fontSize: fonts.title, 
+                fontWeight: 'bold', 
+                marginBottom: platform === 'wechat' ? '1px' : '4px'
+              }}>
+                📋 简约商务
+              </div>
+              <div style={{ 
+                fontSize: fonts.subtitle, 
+                color: '#7f8c8d',
+                lineHeight: spacing.lineHeight
+              }}>
+                极简背景 · 高对比度
+                {platform !== 'wechat' && <><br/>功能至上 · 方正布局</>}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'fresh_illustration_style':
+        return (
+          <div style={{
+            ...baseStyle,
+            background: 'linear-gradient(135deg, #ffc0cb 0%, #98fb98 50%, #87ceeb 100%)',
+            padding: platform === 'wechat' ? '6px' : '12px',
+            color: '#2d5a87',
+            display: 'flex',
+            flexDirection: platform === 'wechat' ? 'row' : 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            borderRadius: '12px',
+            position: 'relative'
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: platform === 'wechat' ? '4px' : '8px',
+              left: platform === 'wechat' ? '4px' : '8px',
+              fontSize: platform === 'wechat' ? '6px' : '8px'
+            }}>🎨</div>
+            <div style={{ flex: platform === 'wechat' ? 1 : 'none', textAlign: 'center' }}>
+              <div style={{ 
+                fontSize: fonts.title, 
+                fontWeight: 'bold', 
+                marginBottom: platform === 'wechat' ? '1px' : '3px'
+              }}>
+                🌈 清新插画
+              </div>
+              <div style={{ 
+                fontSize: fonts.subtitle, 
+                color: '#4a90e2',
+                lineHeight: spacing.lineHeight
+              }}>
+                马卡龙色系 · 手绘风格
+                {platform !== 'wechat' && <><br/>不规则布局 · 治愈氛围</>}
+              </div>
+            </div>
+          </div>
+        );
+
+      // ============= 原有基础模板（适配不同平台） =============
+      
       case 'scene_photo_xiaohongshu':
         return (
           <div style={{
             ...baseStyle,
             background: 'linear-gradient(135deg, #fb923c, #fbbf24)',
-            padding: '8px',
+            padding: platform === 'wechat' ? '6px' : '8px',
             color: '#ffffff',
             display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between'
+            flexDirection: platform === 'wechat' ? 'row' : 'column',
+            justifyContent: 'space-between',
+            alignItems: platform === 'wechat' ? 'center' : 'stretch'
           }}>
-            <div>
-              <div style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '4px' }}>
+            <div style={{ flex: platform === 'wechat' ? 1 : 'none' }}>
+              <div style={{ fontSize: fonts.title, fontWeight: 'bold', marginBottom: platform === 'wechat' ? '1px' : '4px' }}>
                 震惊！一个月涨粉5000+！
               </div>
-              <div style={{ fontSize: '7px', opacity: 0.9 }}>
-                我的公众号运营秘籍全在这！
+              <div style={{ fontSize: fonts.subtitle, opacity: 0.9 }}>
+                我的公众号运营秘籍{platform === 'wechat' ? '' : '全在这！'}
               </div>
             </div>
-            <div style={{
-              background: '#ffffff',
-              color: '#fb923c',
-              padding: '4px 8px',
-              borderRadius: '10px',
-              fontSize: '6px',
-              fontWeight: 'bold',
-              alignSelf: 'flex-end'
-            }}>
-              点击查看
-            </div>
-          </div>
-        );
-
-      case 'flowing_tech_blue':
-        return (
-          <div style={{
-            ...baseStyle,
-            background: 'linear-gradient(135deg, #1e3a8a, #3b82f6)',
-            padding: '8px',
-            color: '#ffffff',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center'
-          }}>
-            <div style={{
-              position: 'absolute',
-              top: '10px',
-              right: '10px',
-              width: '20px',
-              height: '20px',
-              background: '#06b6d4',
-              borderRadius: '50%',
-              opacity: 0.7
-            }}></div>
-            <div style={{ fontSize: '9px', fontWeight: 'bold', marginBottom: '4px' }}>
-              🚀 AI技术革命
-            </div>
-            <div style={{ fontSize: '6px', opacity: 0.9, lineHeight: 1.2 }}>
-              颠覆性创新<br/>改变未来
-            </div>
+            {platform !== 'wechat' && (
+              <div style={{
+                background: '#ffffff',
+                color: '#fb923c',
+                padding: '4px 8px',
+                borderRadius: '10px',
+                fontSize: fonts.body,
+                fontWeight: 'bold',
+                alignSelf: 'flex-end'
+              }}>
+                点击查看
+              </div>
+            )}
           </div>
         );
 
@@ -88,356 +684,62 @@ const CoverTemplatePreview: React.FC<CoverTemplatePreviewProps> = ({ templateKey
         return (
           <div style={{
             ...baseStyle,
-            background: 'linear-gradient(135deg, #a855f7, #fbbf24)',
-            padding: '8px',
-            color: '#ffffff',
+            background: 'linear-gradient(135deg, #ffb6c1 0%, #fffacd 100%)',
+            padding: platform === 'wechat' ? '6px' : '12px',
+            color: '#d1477a',
             display: 'flex',
-            flexDirection: 'column',
+            flexDirection: platform === 'wechat' ? 'row' : 'column',
             justifyContent: 'center',
-            borderRadius: '12px'
+            alignItems: 'center',
+            borderRadius: '15px',
+            boxShadow: '0 2px 8px rgba(255, 182, 193, 0.3)'
           }}>
-            <div style={{ fontSize: '9px', fontWeight: 'bold', marginBottom: '4px', textAlign: 'center' }}>
-              💜 温柔生活
-            </div>
-            <div style={{ fontSize: '6px', opacity: 0.9, textAlign: 'center', lineHeight: 1.3 }}>
-              简约而不简单<br/>温暖每一天
-            </div>
-          </div>
-        );
-
-      case 'modern_business_info':
-        return (
-          <div style={{
-            ...baseStyle,
-            background: 'linear-gradient(135deg, #1e40af, #10b981)',
-            padding: '8px',
-            color: '#ffffff',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between'
-          }}>
-            <div>
-              <div style={{ fontSize: '8px', fontWeight: 'bold', marginBottom: '3px' }}>
-                💼 商务资讯
+            <div style={{ 
+              fontSize: platform === 'wechat' ? '8px' : '12px', 
+              marginBottom: platform === 'wechat' ? '0' : '4px',
+              marginRight: platform === 'wechat' ? '4px' : '0'
+            }}>💜</div>
+            <div style={{ flex: platform === 'wechat' ? 1 : 'none', textAlign: 'center' }}>
+              <div style={{ 
+                fontSize: fonts.title, 
+                fontWeight: 'bold', 
+                marginBottom: platform === 'wechat' ? '1px' : '3px'
+              }}>
+                🌸 温柔圆角
               </div>
-              <div style={{ fontSize: '6px', opacity: 0.9 }}>
-                专业 • 权威 • 实用
+              <div style={{ 
+                fontSize: fonts.subtitle, 
+                color: '#ec4899',
+                lineHeight: spacing.lineHeight
+              }}>
+                柔和色彩 · 圆角设计
+                {platform !== 'wechat' && <><br/>温暖亲和 · 美妆时尚</>}
               </div>
             </div>
-            <div style={{ fontSize: '5px', opacity: 0.8 }}>
-              📊 数据分析 | 📈 趋势预测
-            </div>
           </div>
         );
 
-      case 'minimal_grid':
-        return (
-          <div style={{
-            ...baseStyle,
-            background: '#000000',
-            padding: '8px',
-            color: '#ffffff',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center'
-          }}>
-            <div style={{
-              width: '30px',
-              height: '2px',
-              background: '#ffffff',
-              marginBottom: '6px'
-            }}></div>
-            <div style={{ fontSize: '8px', fontWeight: 'bold', marginBottom: '4px', textAlign: 'center' }}>
-              极简主义
-            </div>
-            <div style={{ fontSize: '5px', opacity: 0.8, textAlign: 'center' }}>
-              少即是多
-            </div>
-            <div style={{
-              width: '20px',
-              height: '2px',
-              background: '#ffffff',
-              marginTop: '6px'
-            }}></div>
-          </div>
-        );
-
-      case 'industrial_rebellion':
-        return (
-          <div style={{
-            ...baseStyle,
-            background: '#000000',
-            padding: '8px',
-            color: '#ef4444',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            position: 'relative'
-          }}>
-            <div style={{
-              position: 'absolute',
-              top: '5px',
-              right: '5px',
-              width: '15px',
-              height: '15px',
-              border: '1px solid #10b981',
-              transform: 'rotate(45deg)'
-            }}></div>
-            <div style={{ fontSize: '9px', fontWeight: 'bold', marginBottom: '4px' }}>
-              ⚡ 反叛精神
-            </div>
-            <div style={{ fontSize: '6px', color: '#10b981' }}>
-              打破常规<br/>重新定义
-            </div>
-          </div>
-        );
-
-      case 'tech_knowledge_sharing':
-        return (
-          <div style={{
-            ...baseStyle,
-            background: 'linear-gradient(135deg, #1e293b, #06b6d4)',
-            padding: '8px',
-            color: '#ffffff',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between'
-          }}>
-            <div>
-              <div style={{ fontSize: '8px', fontWeight: 'bold', marginBottom: '3px' }}>
-                🔷 科技分享
-              </div>
-              <div style={{ fontSize: '6px', opacity: 0.9 }}>
-                深度解析 • 前沿技术
-              </div>
-            </div>
-            <div style={{
-              fontSize: '5px',
-              opacity: 0.7,
-              fontFamily: 'monospace'
-            }}>
-              {'{ code: "innovation" }'}
-            </div>
-          </div>
-        );
-
-      case 'luxury_natural_artistic':
-        return (
-          <div style={{
-            ...baseStyle,
-            background: 'linear-gradient(135deg, #78716c, #d97706)',
-            padding: '8px',
-            color: '#ffffff',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '9px', marginBottom: '4px' }}>✨</div>
-            <div style={{ fontSize: '8px', fontWeight: 'bold', marginBottom: '3px' }}>
-              奢华意境
-            </div>
-            <div style={{ fontSize: '6px', opacity: 0.9, lineHeight: 1.2 }}>
-              东方美学<br/>自然之韵
-            </div>
-          </div>
-        );
-
-      // 增强模板预览
-      case 'modern_gradient_card':
-        return (
-          <div style={{
-            ...baseStyle,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            padding: '8px',
-            color: '#ffffff',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            position: 'relative',
-            backdropFilter: 'blur(10px)'
-          }}>
-            <div style={{
-              position: 'absolute',
-              top: '10px',
-              right: '10px',
-              width: '12px',
-              height: '12px',
-              background: 'rgba(255,255,255,0.3)',
-              borderRadius: '50%'
-            }}></div>
-            <div style={{ fontSize: '9px', fontWeight: 'bold', marginBottom: '4px', textAlign: 'center' }}>
-              🌈 现代渐变
-            </div>
-            <div style={{ fontSize: '6px', opacity: 0.9, textAlign: 'center', lineHeight: 1.2 }}>
-              时尚科技<br/>玻璃质感
-            </div>
-          </div>
-        );
-
-      case 'neon_cyber_style':
-        return (
-          <div style={{
-            ...baseStyle,
-            background: 'linear-gradient(135deg, #000428 0%, #004e92 100%)',
-            padding: '8px',
-            color: '#00d2ff',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            position: 'relative',
-            border: '1px solid #00d2ff'
-          }}>
-            <div style={{
-              position: 'absolute',
-              top: '5px',
-              right: '5px',
-              width: '8px',
-              height: '8px',
-              background: '#ff0080',
-              borderRadius: '50%',
-              boxShadow: '0 0 10px #ff0080'
-            }}></div>
-            <div style={{ fontSize: '9px', fontWeight: 'bold', marginBottom: '4px', textShadow: '0 0 5px #00d2ff' }}>
-              🔮 霓虹赛博
-            </div>
-            <div style={{ fontSize: '6px', color: '#00ff88', textAlign: 'center', lineHeight: 1.2 }}>
-              未来科技<br/>电子光影
-            </div>
-          </div>
-        );
-
-      case 'elegant_minimal':
-        return (
-          <div style={{
-            ...baseStyle,
-            background: '#f8f9fa',
-            padding: '12px',
-            color: '#495057',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            border: '1px solid #e9ecef'
-          }}>
-            <div style={{
-              width: '40px',
-              height: '1px',
-              background: '#6c757d',
-              marginBottom: '8px'
-            }}></div>
-            <div style={{ fontSize: '8px', fontWeight: 'bold', marginBottom: '6px', textAlign: 'center', letterSpacing: '1px' }}>
-              优雅极简
-            </div>
-            <div style={{ fontSize: '5px', color: '#6c757d', textAlign: 'center' }}>
-              简约之美
-            </div>
-          </div>
-        );
-
-      case 'organic_nature':
-        return (
-          <div style={{
-            ...baseStyle,
-            background: 'linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%)',
-            padding: '8px',
-            color: '#2e7d32',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            borderRadius: '20px'
-          }}>
-            <div style={{ fontSize: '10px', marginBottom: '4px' }}>🌿</div>
-            <div style={{ fontSize: '8px', fontWeight: 'bold', marginBottom: '3px', textAlign: 'center' }}>
-              有机自然
-            </div>
-            <div style={{ fontSize: '6px', color: '#388e3c', textAlign: 'center', lineHeight: 1.2 }}>
-              温暖生活<br/>自然曲线
-            </div>
-          </div>
-        );
-
-      case 'retro_vintage':
-        return (
-          <div style={{
-            ...baseStyle,
-            background: 'linear-gradient(135deg, #d4a574 0%, #8b6f47 100%)',
-            padding: '8px',
-            color: '#ffffff',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center',
-            position: 'relative'
-          }}>
-            <div style={{
-              position: 'absolute',
-              top: '5px',
-              left: '5px',
-              width: '20px',
-              height: '20px',
-              border: '2px solid rgba(255,255,255,0.3)',
-              borderRadius: '50%'
-            }}></div>
-            <div style={{ fontSize: '9px', marginBottom: '4px' }}>📻</div>
-            <div style={{ fontSize: '8px', fontWeight: 'bold', marginBottom: '3px' }}>
-              复古怀旧
-            </div>
-            <div style={{ fontSize: '5px', opacity: 0.9, lineHeight: 1.2 }}>
-              经典质感<br/>岁月印记
-            </div>
-          </div>
-        );
-
-      case 'playful_dynamic':
-        return (
-          <div style={{
-            ...baseStyle,
-            background: 'linear-gradient(135deg, #ff6b6b 0%, #4ecdc4 50%, #45b7d1 100%)',
-            padding: '8px',
-            color: '#ffffff',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            position: 'relative'
-          }}>
-            <div style={{
-              position: 'absolute',
-              top: '8px',
-              right: '8px',
-              width: '0',
-              height: '0',
-              borderLeft: '6px solid transparent',
-              borderRight: '6px solid transparent',
-              borderBottom: '8px solid #f9ca24'
-            }}></div>
-            <div style={{ fontSize: '9px', fontWeight: 'bold', marginBottom: '4px', textAlign: 'center' }}>
-              🎨 活力动感
-            </div>
-            <div style={{ fontSize: '6px', textAlign: 'center', lineHeight: 1.2 }}>
-              青春活泼<br/>趣味图形
-            </div>
-          </div>
-        );
-
+      // 其他模板也需要类似适配...
       default:
         return (
           <div style={{
             ...baseStyle,
-            background: '#f3f4f6',
+            background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+            padding: platform === 'wechat' ? '6px' : '8px',
+            color: '#ffffff',
             display: 'flex',
-            alignItems: 'center',
+            flexDirection: platform === 'wechat' ? 'row' : 'column',
             justifyContent: 'center',
-            color: '#6b7280'
+            alignItems: 'center',
+            textAlign: 'center'
           }}>
-            <div style={{ fontSize: '6px', textAlign: 'center' }}>
-              预览<br/>样式
+            <div style={{ flex: platform === 'wechat' ? 1 : 'none' }}>
+              <div style={{ fontSize: fonts.title, fontWeight: 'bold', marginBottom: platform === 'wechat' ? '1px' : '4px' }}>
+                🎨 设计模板
+              </div>
+              <div style={{ fontSize: fonts.subtitle, opacity: 0.9 }}>
+                选择样式模板
+              </div>
             </div>
           </div>
         );
@@ -445,7 +747,15 @@ const CoverTemplatePreview: React.FC<CoverTemplatePreviewProps> = ({ templateKey
   };
 
   return (
-    <div className={`transition-all duration-200 ${isSelected ? 'scale-105 ring-2 ring-primary ring-opacity-50' : 'hover:scale-102'}`}>
+    <div 
+      style={{
+        transform: isSelected ? 'scale(1.05)' : 'scale(1)',
+        transition: 'transform 0.2s ease',
+        filter: isSelected ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : 'none',
+        border: isSelected ? '2px solid #3b82f6' : '2px solid transparent',
+        borderRadius: '10px'
+      }}
+    >
       {getPreviewContent()}
     </div>
   );

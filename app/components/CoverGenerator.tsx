@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { coverSizes, cardTemplates, exampleTexts } from '../config/constants';
 import { ENHANCED_TEMPLATES } from '../utils/enhancedTemplates';
 import { analyzeContentAndRecommend } from '../utils/aiContentAnalyzer';
@@ -8,6 +8,12 @@ import { apiCall, isAuthenticated } from '../lib/auth';
 import CoverTemplatePreview from './CoverTemplatePreview';
 import EditableCard from './EditableCard';
 import CoverContentExtractor from './ContentOptimizer';
+import { 
+  UNIFIED_TEMPLATE_CONFIG, 
+  getActualTemplateKey, 
+  getPlatformRecommendedTemplates,
+  sortTemplatesByPlatform 
+} from '../config/templateMapping';
 
 // 整合原有模板和增强模板
 const allCardTemplates = [
@@ -19,7 +25,10 @@ const allCardTemplates = [
     preview: template.preview,
     category: template.category,
     features: template.features,
-    colorPalette: template.colorPalette
+    // 统一colorPalette格式
+    colorPalette: Array.isArray(template.colorPalette) 
+      ? template.colorPalette 
+      : [template.colorPalette.primary, template.colorPalette.secondary, template.colorPalette.accent || '#ffffff']
   }))
 ];
 
@@ -48,7 +57,10 @@ export default function CoverGenerator({ isLoggedIn, onShowLogin }: CoverGenerat
   const [aiRecommendation, setAiRecommendation] = useState<any>(null);
   const [showAiSuggestion, setShowAiSuggestion] = useState(false);
 
-  // AI智能分析和推荐
+  // 使用统一的模板配置
+  const allCardTemplates = UNIFIED_TEMPLATE_CONFIG;
+
+  // AI智能分析和推荐 - 增强版本
   const handleAiAnalysis = () => {
     if (!cardInput.trim()) return;
     
@@ -59,6 +71,43 @@ export default function CoverGenerator({ isLoggedIn, onShowLogin }: CoverGenerat
     // 自动应用推荐的模板
     if (recommendation.confidence > 0.6) {
       setCardTemplate(recommendation.templateKey);
+      // 清空之前的生成结果，避免显示不一致
+      setCardResult('');
+      setCardResultInfo(null);
+      setCardError('');
+      setEditedCardContent('');
+    }
+  };
+
+  // 智能平台模板推荐 - 使用新的配置
+  const getRecommendedTemplatesForPlatform = (platform: string) => {
+    return getPlatformRecommendedTemplates(platform);
+  };
+
+  // 根据平台获取排序后的模板列表
+  const getSortedTemplates = () => {
+    return sortTemplatesByPlatform(cardSize);
+  };
+
+  // 处理平台切换时的智能推荐
+  const handlePlatformChange = (newPlatform: string) => {
+    setCardSize(newPlatform);
+    
+    // 清空之前的生成结果，避免平台切换后显示不一致
+    setCardResult('');
+    setCardResultInfo(null);
+    setCardError('');
+    setEditedCardContent('');
+    
+    // 自动推荐适合的模板
+    const recommendedTemplates = getRecommendedTemplatesForPlatform(newPlatform);
+    if (recommendedTemplates.length > 0 && !recommendedTemplates.includes(cardTemplate)) {
+      setCardTemplate(recommendedTemplates[0]);
+    }
+    
+    // 如果有输入内容，重新分析推荐
+    if (cardInput.trim()) {
+      setTimeout(handleAiAnalysis, 100);
     }
   };
 
@@ -172,7 +221,7 @@ export default function CoverGenerator({ isLoggedIn, onShowLogin }: CoverGenerat
     setCardError(progressMessages[0] + ` (预计${Math.round(estimatedTime)}秒)`);
     
     // ⚡ 智能超时处理 - 基于内容复杂度
-    const timeoutDuration = Math.max(20000, estimatedTime * 1000 + 5000); // 预估时间 + 5秒缓冲
+    const timeoutDuration = Math.max(120000, estimatedTime * 1000 + 10000); // 预估时间 + 10秒缓冲，最少2分钟
     const timeoutId = setTimeout(() => {
       clearInterval(progressInterval);
       abortController.abort();
@@ -187,7 +236,7 @@ export default function CoverGenerator({ isLoggedIn, onShowLogin }: CoverGenerat
         method: 'POST',
         body: JSON.stringify({
           text: contentToUse,
-          template: cardTemplate,
+          template: getActualTemplateKey(cardTemplate),
           size: cardSize,
         }),
         signal: abortController.signal, // ⚡ 支持取消请求
@@ -330,7 +379,7 @@ export default function CoverGenerator({ isLoggedIn, onShowLogin }: CoverGenerat
     }
   };
 
-  // 封面下载图片 - 修复版本，使用智能容器查找
+  // 封面下载图片 - 修复版本，确保预览与下载完全一致
   const handleCardDownload = async () => {
     if (!cardResultInfo?.dimensions) {
       setCardError('没有可下载的内容');
@@ -339,7 +388,7 @@ export default function CoverGenerator({ isLoggedIn, onShowLogin }: CoverGenerat
 
     try {
       setCardError('🚀 正在准备下载...');
-      console.log('📋 开始下载流程');
+      console.log('📋 开始下载流程 - 修复版本');
       
       const { downloadCoverImage, generateFileName } = await import('../utils/downloadHelper');
       
@@ -357,14 +406,158 @@ export default function CoverGenerator({ isLoggedIn, onShowLogin }: CoverGenerat
 
       setCardError('🖼️ 正在生成图片...');
 
-      // 使用智能容器查找，不再依赖特定选择器
-      const success = await downloadCoverImage('auto', {
+      // 智能容器查找策略 - 优先使用下载专用容器
+      let targetContainer: HTMLElement | null = null;
+      
+      // 策略1：优先查找下载专用容器（来自 EditableCard）
+      targetContainer = document.querySelector('[data-download-container]') as HTMLElement;
+      if (targetContainer) {
+        console.log('✅ 找到下载专用容器');
+        
+        // 验证下载容器内容是否为空或过时
+        const hasValidContent = targetContainer.innerHTML.trim().length > 100;
+        if (!hasValidContent) {
+          console.log('⚠️ 下载容器内容为空，尝试强制同步');
+          
+          // 查找预览容器并强制同步
+          const previewContainer = document.querySelector('[data-preview-container]') as HTMLElement;
+          if (previewContainer && previewContainer.innerHTML.trim()) {
+            console.log('🔄 从预览容器同步内容到下载容器');
+            targetContainer.innerHTML = previewContainer.innerHTML;
+            
+            // 重置下载容器样式
+            const downloadContent = targetContainer.firstElementChild as HTMLElement;
+            if (downloadContent) {
+              downloadContent.style.cssText = `
+                width: ${dimensions.width}px !important;
+                height: ${dimensions.height}px !important;
+                position: relative !important;
+                overflow: hidden !important;
+                transform: none !important;
+                scale: 1 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border: none !important;
+                box-sizing: border-box !important;
+                font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif !important;
+              `;
+              
+              // 清理编辑痕迹
+              const cleanElement = (el: HTMLElement) => {
+                el.removeAttribute('data-editable-id');
+                el.removeAttribute('contenteditable');
+                el.classList.remove('editable-element', 'editable-hint');
+                el.style.removeProperty('cursor');
+                el.style.removeProperty('outline');
+                el.style.removeProperty('transition');
+                el.style.removeProperty('box-shadow');
+                
+                Array.from(el.children).forEach(child => {
+                  cleanElement(child as HTMLElement);
+                });
+              };
+              
+              cleanElement(downloadContent);
+            }
+          }
+        }
+      } else {
+        // 策略2：查找预览容器并创建下载版本
+        const previewContainer = document.querySelector('[data-preview-container]') as HTMLElement;
+        if (previewContainer) {
+          console.log('📋 找到预览容器，创建下载版本');
+          
+          // 创建临时下载容器
+          targetContainer = document.createElement('div');
+          targetContainer.setAttribute('data-download-container', 'true');
+          targetContainer.style.cssText = `
+            position: absolute !important;
+            left: -99999px !important;
+            top: -99999px !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+            z-index: -9999 !important;
+          `;
+          
+          // 复制预览内容
+          targetContainer.innerHTML = previewContainer.innerHTML;
+          document.body.appendChild(targetContainer);
+          
+          // 应用下载专用样式
+          const downloadContent = targetContainer.firstElementChild as HTMLElement;
+          if (downloadContent) {
+            downloadContent.style.cssText = `
+              width: ${dimensions.width}px !important;
+              height: ${dimensions.height}px !important;
+              position: relative !important;
+              overflow: hidden !important;
+              transform: none !important;
+              scale: 1 !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              border: none !important;
+              box-sizing: border-box !important;
+              font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif !important;
+            `;
+          }
+          
+          // 清理编辑相关元素
+          const allElements = targetContainer.querySelectorAll('*');
+          allElements.forEach(el => {
+            const element = el as HTMLElement;
+            element.removeAttribute('data-editable-id');
+            element.removeAttribute('contenteditable');
+            element.classList.remove('editable-element', 'editable-hint');
+            element.style.removeProperty('cursor');
+            element.style.removeProperty('outline');
+            element.style.removeProperty('transition');
+            element.style.removeProperty('box-shadow');
+          });
+        }
+      }
+
+      // 策略3：如果还是找不到，使用通用查找
+      if (!targetContainer) {
+        console.log('🔍 使用通用容器查找策略');
+        const candidates = document.querySelectorAll('div[style*="width"][style*="height"]');
+        for (const candidate of Array.from(candidates)) {
+          const element = candidate as HTMLElement;
+          const width = element.offsetWidth;
+          const height = element.offsetHeight;
+          
+          if ((width >= 300 && height >= 200) || element.innerHTML.includes('封面')) {
+            targetContainer = element;
+            console.log('✅ 找到候选容器:', { width, height });
+            break;
+          }
+        }
+      }
+
+      if (!targetContainer) {
+        throw new Error('无法找到任何可下载的内容容器');
+      }
+
+      console.log('🎯 使用容器:', targetContainer.tagName, targetContainer.className);
+      console.log('📄 容器内容长度:', targetContainer.innerHTML.length);
+
+      // 执行下载
+      const success = await downloadCoverImage(targetContainer, {
         width: dimensions.width,
         height: dimensions.height,
         filename: filename,
         backgroundColor: null,
         scale: 2
       });
+
+      // 清理临时容器
+      if (targetContainer.hasAttribute('data-download-container') && 
+          targetContainer.style.position === 'absolute') {
+        try {
+          document.body.removeChild(targetContainer);
+        } catch (e) {
+          console.log('临时容器清理失败，可能已被移除');
+        }
+      }
 
       if (success) {
         setCardError('✅ 下载成功！');
@@ -388,7 +581,12 @@ export default function CoverGenerator({ isLoggedIn, onShowLogin }: CoverGenerat
   return (
     <div className="space-y-8">
       <div className="mb-8">
-        <label className="block text-sm font-medium text-gray-700 mb-4">选择封面尺寸</label>
+        <label className="block text-sm font-medium text-gray-700 mb-4">
+          选择封面尺寸
+          <span className="ml-2 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+            ✨ 智能适配设计模板
+          </span>
+        </label>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           {coverSizes.map(size => (
             <div
@@ -398,7 +596,7 @@ export default function CoverGenerator({ isLoggedIn, onShowLogin }: CoverGenerat
                   ? 'border-primary shadow-xl bg-blue-50 ring-2 ring-primary ring-opacity-30 transform scale-105'
                   : 'border-gray-200 bg-white hover:shadow-lg hover:border-gray-300 hover:scale-102'
               }`}
-              onClick={() => setCardSize(size.key)}
+              onClick={() => handlePlatformChange(size.key)}
             >
               <div className="text-center">
                 <div className="text-2xl mb-2">{size.icon}</div>
@@ -411,22 +609,52 @@ export default function CoverGenerator({ isLoggedIn, onShowLogin }: CoverGenerat
                 <p className="text-xs text-gray-600 leading-relaxed">
                   {size.description}
                 </p>
+                {cardSize === size.key && (
+                  <div className="mt-2 text-xs text-blue-600 font-medium">
+                    ✅ 已选择，将智能匹配设计风格
+                  </div>
+                )}
               </div>
             </div>
           ))}
         </div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">输入封面文案内容</label>
+
+        {/* 平台特色说明 */}
+        {cardSize && (
+          <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-blue-600">🎯</span>
+              <span className="font-medium text-blue-800">
+                {cardSize === 'xiaohongshu' && '小红书特色：活泼友好、圆角设计、明亮色彩'}
+                {cardSize === 'video' && '短视频特色：极简冲击、超大字体、3秒抓眼球'}
+                {cardSize === 'wechat' && '公众号特色：专业权威、商务配色、严谨布局'}
+              </span>
+            </div>
+            <div className="text-sm text-blue-700">
+              {cardSize === 'xiaohongshu' && '💡 建议使用种草、测评、攻略类关键词，字体建议40-50px主标题'}
+              {cardSize === 'video' && '💡 建议使用震撼、爆料、必看类关键词，字体建议70-90px超大标题'}
+              {cardSize === 'wechat' && '💡 建议使用深度、权威、专业类关键词，字体建议30-38px商务标题'}
+            </div>
+          </div>
+        )}
+
+        <label className="block text-sm font-medium text-gray-700 mb-2 mt-6">
+          输入封面文案内容
+          <span className="ml-2 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+            🤖 AI智能优化
+          </span>
+        </label>
         <textarea
           className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent h-32"
-          placeholder="请输入您想要制作封面的核心文案内容，如标题、关键信息等..."
+          placeholder={`请输入${cardSize === 'xiaohongshu' ? '小红书' : cardSize === 'video' ? '短视频' : '公众号'}封面的核心文案内容...`}
           value={cardInput}
           onChange={e => handleCardInputChange(e.target.value)}
           disabled={cardLoading}
         />
         <div className="text-xs text-gray-400 mt-1">
-          系统将根据您输入的文案自动生成符合所选风格的专业封面设计
+          💡 系统将根据选择的平台自动优化文案结构和设计风格，确保符合{cardSize === 'xiaohongshu' ? '小红书' : cardSize === 'video' ? '短视频' : '公众号'}规范
         </div>
-        
+
         {/* 示例文案 */}
         <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
           <div className="text-xs font-medium text-gray-700 mb-2">💡 文案示例（点击快速使用）：</div>
@@ -504,7 +732,14 @@ export default function CoverGenerator({ isLoggedIn, onShowLogin }: CoverGenerat
           
           <div className="mt-4 flex gap-3">
             <button
-              onClick={() => setCardTemplate(aiRecommendation.templateKey)}
+              onClick={() => {
+                setCardTemplate(aiRecommendation.templateKey);
+                // 清空之前的生成结果，避免显示不一致
+                setCardResult('');
+                setCardResultInfo(null);
+                setCardError('');
+                setEditedCardContent('');
+              }}
               className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
             >
               ✨ 应用推荐模板
@@ -519,49 +754,105 @@ export default function CoverGenerator({ isLoggedIn, onShowLogin }: CoverGenerat
         </div>
       )}
 
+      {/* 模板选择区域优化 */}
       <div className="mb-8">
-        <label className="block text-sm font-medium text-gray-700 mb-4">选择封面设计风格</label>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {allCardTemplates.map(template => (
-            <div
-              key={template.key}
-              className={`rounded-xl border cursor-pointer transition-all duration-300 ${
-                cardTemplate === template.key
-                  ? 'border-primary shadow-xl bg-blue-50 ring-2 ring-primary ring-opacity-30 transform scale-105'
-                  : 'border-gray-200 bg-white hover:shadow-lg hover:border-gray-300 hover:scale-102'
-              }`}
-              onClick={() => setCardTemplate(template.key)}
-            >
-              {/* 预览区域 */}
-              <div className="p-4 flex justify-center">
-                <CoverTemplatePreview 
-                  templateKey={template.key} 
-                  isSelected={cardTemplate === template.key}
-                />
-              </div>
-              
-              {/* 信息区域 */}
-              <div className="px-4 pb-4">
-                <div className="text-center mb-2">
-                  <div className="font-bold text-sm text-gray-800 mb-1">
-                    {template.label}
-                  </div>
-                  <div className="text-xs text-primary font-medium bg-primary bg-opacity-10 px-2 py-1 rounded-full inline-block">
-                    {template.category}
-                  </div>
-                </div>
-                <p className="text-xs text-gray-600 text-center leading-relaxed">
-                  {template.description}
-                </p>
-              </div>
+        <label className="block text-sm font-medium text-gray-700 mb-4">
+          选择封面设计风格
+          <span className="ml-2 text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded-full">
+            🎨 平台智能推荐
+          </span>
+        </label>
+        
+        {/* 推荐模板区域 */}
+        {cardSize && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="text-sm text-yellow-800">
+              <span className="font-medium">✨ 为{cardSize === 'xiaohongshu' ? '小红书' : cardSize === 'video' ? '短视频' : '公众号'}推荐:</span>
+              {getRecommendedTemplatesForPlatform(cardSize).slice(0, 2).map((templateKey, index) => {
+                const template = allCardTemplates.find(t => t.key === templateKey);
+                return template ? (
+                  <span key={templateKey} className="ml-2">
+                    {index > 0 && '、'}{template.label}
+                  </span>
+                ) : null;
+              })}
             </div>
-          ))}
+          </div>
+        )}
+        
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {getSortedTemplates().map(template => {
+            const isRecommended = getRecommendedTemplatesForPlatform(cardSize).includes(template.key);
+            
+            return (
+              <div
+                key={template.key}
+                className={`rounded-xl border cursor-pointer transition-all duration-300 ${
+                  cardTemplate === template.key
+                    ? 'border-primary shadow-xl bg-blue-50 ring-2 ring-primary ring-opacity-30 transform scale-105'
+                    : isRecommended
+                    ? 'border-yellow-300 bg-yellow-50 hover:shadow-lg hover:border-yellow-400 hover:scale-102'
+                    : 'border-gray-200 bg-white hover:shadow-lg hover:border-gray-300 hover:scale-102'
+                }`}
+                onClick={() => {
+                  setCardTemplate(template.key);
+                  // 清空之前的生成结果，避免显示不一致
+                  setCardResult('');
+                  setCardResultInfo(null);
+                  setCardError('');
+                  setEditedCardContent('');
+                }}
+              >
+                {/* 推荐标识 */}
+                {isRecommended && cardTemplate !== template.key && (
+                  <div className="bg-yellow-400 text-yellow-900 text-xs px-2 py-1 rounded-tl-xl rounded-br-xl font-medium">
+                    推荐
+                  </div>
+                )}
+                
+                {/* 预览区域 */}
+                <div className="p-4 flex justify-center">
+                  <CoverTemplatePreview 
+                    templateKey={template.key} 
+                    isSelected={cardTemplate === template.key}
+                    platform={cardSize}
+                  />
+                </div>
+                
+                {/* 信息区域 */}
+                <div className="px-4 pb-4">
+                  <div className="text-center mb-2">
+                    <div className="font-bold text-sm text-gray-800 mb-1">
+                      {template.label}
+                    </div>
+                    <div className={`text-xs font-medium px-2 py-1 rounded-full inline-block ${
+                      isRecommended ? 'bg-yellow-100 text-yellow-700' : 'bg-primary bg-opacity-10 text-primary'
+                    }`}>
+                      {template.category}
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-600 text-center leading-relaxed">
+                    {template.description}
+                  </p>
+                  {isRecommended && (
+                    <div className="mt-2 text-xs text-yellow-700 text-center font-medium">
+                      ⭐ 最适合当前平台
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
       <div className="mt-8 flex justify-center">
         <button
-          className="w-full max-w-xl btn-primary py-4 text-lg font-medium"
+          className={`w-full max-w-xl py-4 text-lg font-medium rounded-lg transition-all duration-300 ${
+            cardLoading 
+              ? 'bg-gray-400 cursor-not-allowed' 
+              : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
+          }`}
           onClick={handleCardGenerate}
           disabled={cardLoading}
         >
@@ -571,17 +862,17 @@ export default function CoverGenerator({ isLoggedIn, onShowLogin }: CoverGenerat
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              AI设计中...
+              ⚡ AI设计中...
             </span>
           ) : (
             <span className="flex items-center justify-center gap-2">
               {optimizedContent ? (
                 <>
-                  ✨ 生成专业封面
-                  <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded-full">使用优化内容</span>
+                  ✨ 生成{cardSize === 'xiaohongshu' ? '小红书' : cardSize === 'video' ? '短视频' : '公众号'}专业封面
+                  <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded-full">优化内容</span>
                 </>
               ) : (
-                <>🎨 生成专业封面</>
+                <>🎨 生成{cardSize === 'xiaohongshu' ? '小红书' : cardSize === 'video' ? '短视频' : '公众号'}专业封面</>
               )}
             </span>
           )}
@@ -599,9 +890,25 @@ export default function CoverGenerator({ isLoggedIn, onShowLogin }: CoverGenerat
       )}
 
       {cardError && (
-        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <div className="text-red-700 text-center">
-            <span className="font-medium">生成失败：</span>{cardError}
+        <div className={`mt-4 p-4 border rounded-lg ${
+          cardError.includes('✅') || cardError.includes('成功') 
+            ? 'bg-green-50 border-green-200' 
+            : cardError.includes('⚠️') || cardError.includes('已生成降级版本')
+            ? 'bg-yellow-50 border-yellow-200'
+            : 'bg-red-50 border-red-200'
+        }`}>
+          <div className={`text-center ${
+            cardError.includes('✅') || cardError.includes('成功')
+              ? 'text-green-700'
+              : cardError.includes('⚠️') || cardError.includes('已生成降级版本')
+              ? 'text-yellow-700'
+              : 'text-red-700'
+          }`}>
+            {cardError.includes('✅') || cardError.includes('成功') ? (
+              <span>{cardError}</span>
+            ) : (
+              <span><span className="font-medium">生成状态：</span>{cardError}</span>
+            )}
           </div>
         </div>
       )}
@@ -638,6 +945,60 @@ export default function CoverGenerator({ isLoggedIn, onShowLogin }: CoverGenerat
                     onClick={handleCardCopy}
                   >
                     {cardCopied ? '✅ 已复制' : '📋 复制代码'}
+                  </button>
+                  {/* 调试验证按钮 - 帮助检查内容一致性 */}
+                  <button
+                    className="px-4 py-2 text-sm rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition-all duration-200 flex items-center gap-2 hover:scale-105 active:scale-95"
+                    onClick={() => {
+                      // 内容一致性检查 + 可见性检查
+                      const previewContainer = document.querySelector('[data-preview-container]') as HTMLElement;
+                      const downloadContainer = document.querySelector('[data-download-container]') as HTMLElement;
+                      
+                      if (previewContainer && downloadContainer) {
+                        const previewText = previewContainer.textContent?.trim() || '';
+                        const downloadText = downloadContainer.textContent?.trim() || '';
+                        const isConsistent = previewText === downloadText;
+                        
+                        // 检查下载容器的可见性状态
+                        const containerStyle = window.getComputedStyle(downloadContainer);
+                        const isVisible = containerStyle.visibility !== 'hidden' && containerStyle.opacity !== '0';
+                        const hasContent = downloadContainer.innerHTML.length > 100;
+                        
+                        console.log('🔍 完整状态检查:', {
+                          预览文本: previewText,
+                          下载文本: downloadText,
+                          内容一致: isConsistent,
+                          下载容器可见: isVisible,
+                          有内容: hasContent,
+                          容器visibility: containerStyle.visibility,
+                          容器opacity: containerStyle.opacity,
+                          容器位置: `${containerStyle.left}, ${containerStyle.top}`,
+                          容器尺寸: `${containerStyle.width}x${containerStyle.height}`,
+                          预览HTML长度: previewContainer.innerHTML.length,
+                          下载HTML长度: downloadContainer.innerHTML.length
+                        });
+                        
+                        let message = '';
+                        if (!hasContent) {
+                          message = '❌ 下载容器没有内容';
+                        } else if (!isVisible) {
+                          message = '⚠️ 下载容器不可见 (可能导致空白图片)';
+                        } else if (!isConsistent) {
+                          message = `⚠️ 发现内容不一致:\n预览: "${previewText.slice(0, 50)}..."\n下载: "${downloadText.slice(0, 50)}..."`;
+                        } else {
+                          message = '✅ 所有检查通过，可以安全下载';
+                        }
+                        
+                        setCardError(message);
+                        setTimeout(() => setCardError(''), 5000);
+                      } else {
+                        setCardError('❌ 未找到预览或下载容器');
+                        setTimeout(() => setCardError(''), 3000);
+                      }
+                    }}
+                    title="检查预览与下载内容是否一致"
+                  >
+                    🔍 验证同步
                   </button>
                   <button
                     className="px-4 py-2 text-sm rounded-lg bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl hover:scale-105 active:scale-95"

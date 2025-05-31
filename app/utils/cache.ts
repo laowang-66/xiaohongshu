@@ -10,13 +10,24 @@ class MemoryCache {
   private maxSize = 100; // 最多缓存100个项目
   private defaultTTL = 30 * 60 * 1000; // 默认30分钟过期
 
-  // 生成缓存键
+  // 生成缓存键 - 改进版本
   private generateKey(prefix: string, data: any): string {
-    const hash = this.simpleHash(JSON.stringify(data));
-    return `${prefix}:${hash}`;
+    const dataString = JSON.stringify(data);
+    const timestamp = Math.floor(Date.now() / 1000); // 添加时间戳避免冲突
+    const hash = this.betterHash(dataString + timestamp.toString());
+    return `${prefix}:${hash}:${dataString.length}`;
   }
 
-  // 简单哈希函数
+  // 改进的哈希函数 - 使用djb2算法
+  private betterHash(str: string): string {
+    let hash = 5381;
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) + hash) + str.charCodeAt(i);
+    }
+    return Math.abs(hash).toString(36).substring(0, 12);
+  }
+
+  // 简单哈希函数 - 保留作为备用
   private simpleHash(str: string): string {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {

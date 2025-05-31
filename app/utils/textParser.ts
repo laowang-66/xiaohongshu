@@ -194,42 +194,105 @@ export class TextParser {
   }
 
   /**
-   * 更新文本元素的内容和样式
+   * 更新文本元素的内容和样式 - 改进版本
    */
   updateTextElement(id: string, newText: string, newStyle: any): boolean {
     const textElement = this.textElements.get(id);
     if (!textElement) {
+      console.warn('❌ 未找到文本元素:', id);
       return false;
     }
 
     const { element } = textElement;
+    console.log('🎯 正在更新文本元素:', {
+      id,
+      旧文本: textElement.text,
+      新文本: newText,
+      元素类型: element.tagName,
+      子元素数量: element.children.length
+    });
     
-    // 更新文本内容
-    if (element.children.length === 0) {
-      // 叶子节点，直接设置文本内容
-      element.textContent = newText;
-    } else {
-             // 有子元素，需要更新文本节点
-       Array.from(element.childNodes).forEach(child => {
-         if (child.nodeType === Node.TEXT_NODE) {
-           child.textContent = newText;
-           return;
-         }
-       });
+    try {
+      // 更新文本内容 - 改进版本
+      let textUpdated = false;
+      
+      if (element.children.length === 0) {
+        // 叶子节点，直接设置文本内容
+        element.textContent = newText;
+        textUpdated = true;
+        console.log('✅ 叶子节点文本更新成功');
+      } else {
+        // 有子元素，需要智能更新文本节点
+        const textNodes = Array.from(element.childNodes).filter(
+          child => child.nodeType === Node.TEXT_NODE && child.textContent?.trim()
+        );
+        
+        if (textNodes.length > 0) {
+          // 更新第一个有内容的文本节点
+          textNodes[0].textContent = newText;
+          textUpdated = true;
+          console.log('✅ 文本节点更新成功');
+        } else {
+          // 没有文本节点，创建一个新的
+          const textNode = document.createTextNode(newText);
+          element.insertBefore(textNode, element.firstChild);
+          textUpdated = true;
+          console.log('✅ 创建新文本节点成功');
+        }
+      }
+
+      if (!textUpdated) {
+        console.warn('⚠️ 文本内容未能更新');
+        return false;
+      }
+
+      // 更新样式 - 增强版本
+      const htmlElement = element as HTMLElement;
+      
+      // 先保存当前的重要样式，避免丢失
+      const preservedStyles = {
+        position: htmlElement.style.position,
+        display: htmlElement.style.display,
+        visibility: htmlElement.style.visibility,
+        transform: htmlElement.style.transform,
+        transformOrigin: htmlElement.style.transformOrigin
+      };
+      
+      // 应用新样式
+      htmlElement.style.fontSize = `${newStyle.fontSize}px`;
+      htmlElement.style.color = newStyle.color;
+      htmlElement.style.fontWeight = newStyle.fontWeight;
+      htmlElement.style.textAlign = newStyle.textAlign;
+      
+      // 确保字体一致性
+      if (!htmlElement.style.fontFamily || htmlElement.style.fontFamily.includes('system-ui')) {
+        htmlElement.style.fontFamily = "'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif";
+      }
+      
+      // 恢复重要样式
+      Object.entries(preservedStyles).forEach(([property, value]) => {
+        if (value) {
+          htmlElement.style.setProperty(property, value);
+        }
+      });
+
+      // 更新缓存的数据
+      textElement.text = newText;
+      textElement.style = { ...newStyle };
+
+      console.log('🎨 文本元素更新完成:', {
+        最终文本: element.textContent,
+        新样式: newStyle
+      });
+
+      // 触发重绘，确保更改生效
+      element.getBoundingClientRect();
+
+      return true;
+    } catch (error) {
+      console.error('❌ 更新文本元素时出错:', error);
+      return false;
     }
-
-    // 更新样式
-    const htmlElement = element as HTMLElement;
-    htmlElement.style.fontSize = `${newStyle.fontSize}px`;
-    htmlElement.style.color = newStyle.color;
-    htmlElement.style.fontWeight = newStyle.fontWeight;
-    htmlElement.style.textAlign = newStyle.textAlign;
-
-    // 更新缓存的数据
-    textElement.text = newText;
-    textElement.style = { ...newStyle };
-
-    return true;
   }
 
   /**
